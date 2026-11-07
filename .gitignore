@@ -1,0 +1,13 @@
+# Secretos: NUNCA se suben (QR_SECRET, GMAIL_APP_PASSWORD, IA_API_KEY)
+.env
+.env.*
+
+# Dependencias (se reinstalan con npm install)
+node_modules/
+
+# Base de datos local y archivos del sistema
+*.db
+*.sqlite
+*.sqlite3
+.DS_Store
+Thumbs.db

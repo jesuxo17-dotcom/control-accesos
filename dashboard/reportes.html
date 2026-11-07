@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<!-- =====================================================================
+     reportes.html — Historial de entradas y salidas con filtros por
+     fecha, carrera y usuario; exporta a CSV (se abre en Excel).
+     Usa GET /api/eventos. Lógica en js/reportes.js
+     ===================================================================== -->
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reportes de acceso</title>
+  <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+  <header class="barra">
+    <h1>Reportes</h1>
+    <nav>
+      <a href="index.html">En vivo</a>
+      <a href="usuarios.html">Usuarios</a>
+      <a href="permisos.html">Permisos</a>
+      <a href="reportes.html" class="activo">Reportes</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="tarjeta">
+      <form id="filtros" class="filtros">
+        <div><label for="desde">Desde</label><input type="date" id="desde"></div>
+        <div><label for="hasta">Hasta</label><input type="date" id="hasta"></div>
+        <div><label for="carrera">Carrera</label><select id="carrera"><option value="">Todas</option></select></div>
+        <div><label for="usuario_id">Usuario</label><select id="usuario_id"><option value="">Todos</option></select></div>
+        <div><button class="primario" style="width:100%">Buscar</button></div>
+        <div><button type="button" id="btn-csv" style="width:100%">⬇ Exportar CSV</button></div>
+      </form>
+      <p id="resumen" style="color:var(--suave);font-size:13px"></p>
+      <div class="tabla-scroll">
+        <table>
+          <thead><tr><th>Fecha y hora</th><th>Nombre</th><th>Carrera</th><th>Tipo</th><th>Origen</th><th>Kiosco</th></tr></thead>
+          <tbody id="tabla"><tr><td colspan="6" class="vacio">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/util.js"></script>
+  <script src="js/mock.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/reportes.js"></script>
+</body>
+</html>

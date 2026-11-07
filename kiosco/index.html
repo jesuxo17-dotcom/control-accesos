@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Kiosco de acceso</title>
+<style>
+/* =========================================================
+   KIOSCO - estilos
+   Letras grandes (se miden en vw para que se lean a 2 metros
+   sin importar el tamaño de la pantalla) y alto contraste.
+   ========================================================= */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{
+  background:#0b1220;color:#fff;
+  font-family:"Segoe UI",system-ui,Roboto,Arial,sans-serif;
+  cursor:none;                 /* sin cursor: es un kiosco */
+  user-select:none;-webkit-user-select:none;
+  touch-action:manipulation;
+}
+
+/* Cada "pantalla" ocupa todo; solo una tiene la clase .activa */
+.pantalla{
+  position:fixed;inset:0;display:none;
+  flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:4vw;gap:2.5vw;
+}
+.pantalla.activa{display:flex}
+
+/* ---------- Pantalla de espera ---------- */
+.titulo{font-size:clamp(44px,9vw,170px);font-weight:700;line-height:1.05}
+.subtitulo{font-size:clamp(22px,3.4vw,64px);color:#9fb3d1}
+
+/* Icono de credencial con anillo que "respira" para indicar que está listo */
+.icono{width:clamp(120px,18vw,320px);height:auto;position:relative}
+.icono svg{width:100%;height:auto;display:block}
+.anillo{
+  position:absolute;inset:-12%;border:0.6vw solid #3b82f6;border-radius:50%;
+  opacity:.0;animation:pulso 2.4s ease-out infinite;
+}
+@keyframes pulso{0%{transform:scale(.8);opacity:.7}100%{transform:scale(1.15);opacity:0}}
+
+/* Reloj abajo a la derecha */
+.reloj{position:fixed;right:3vw;bottom:2.4vw;text-align:right;color:#9fb3d1}
+.reloj .hora{font-size:clamp(28px,4vw,72px);font-weight:600;color:#fff}
+.reloj .fecha{font-size:clamp(14px,1.6vw,30px)}
+
+/* Indicador de estado del lector (abajo a la izquierda).
+   Verde = el input oculto tiene el foco y el lector puede escribir. */
+.estado{
+  position:fixed;left:3vw;bottom:2.4vw;display:flex;align-items:center;gap:1vw;
+  font-size:clamp(14px,1.6vw,30px);color:#9fb3d1;
+}
+.punto{width:1.4vw;height:1.4vw;min-width:12px;min-height:12px;border-radius:50%;background:#ef4444}
+.punto.ok{background:#22c55e}
+
+/* ---------- PASO 4: pantalla de resultado ----------
+   Todo el fondo cambia de color para que el guardia lo vea de lejos:
+   verde = pasa, rojo = rechazado, ámbar = externo o repetido. */
+#pantalla-resultado{transition:background .15s}
+#pantalla-resultado.verde{background:#0f5132}
+#pantalla-resultado.rojo{background:#7f1d1d}
+#pantalla-resultado.ambar{background:#7a4a05}
+#pantalla-resultado.cargando{background:#0b1220}
+.res-icono{font-size:clamp(70px,12vw,220px);line-height:1;font-weight:800}
+.res-titulo{font-size:clamp(44px,8vw,160px);font-weight:800;line-height:1}
+.res-persona{display:flex;align-items:center;gap:3vw;max-width:92vw}
+.res-foto{width:clamp(110px,16vw,300px);height:clamp(110px,16vw,300px);border-radius:50%;
+  object-fit:cover;border:0.5vw solid rgba(255,255,255,.85);background:#1e293b;flex-shrink:0}
+.res-nombre{font-size:clamp(28px,4.6vw,90px);font-weight:700;text-align:left;line-height:1.1}
+.res-detalle{font-size:clamp(18px,2.6vw,50px);color:rgba(255,255,255,.85);text-align:left;margin-top:.6vw}
+.res-motivo{font-size:clamp(22px,3.4vw,64px);font-weight:600;background:rgba(0,0,0,.25);
+  padding:.8vw 2.4vw;border-radius:1.2vw}
+.res-hora{font-size:clamp(18px,2.2vw,40px);color:rgba(255,255,255,.8)}
+/* Permiso nocturno vigente (campo "permiso" de /api/scan) */
+.res-permiso{font-size:clamp(20px,3vw,56px);font-weight:600;background:#312e81;
+  padding:.8vw 2.4vw;border-radius:1.2vw;display:none}
+
+/* Etiqueta con el kiosco y el modo (arriba a la izquierda) */
+.etiqueta-kiosco{position:fixed;left:3vw;top:2.4vw;font-size:clamp(14px,1.6vw,30px);color:#9fb3d1}
+
+/* ---------- Cámara (paso 3) ---------- */
+#camara{
+  display:none;width:min(62vh,80vw);aspect-ratio:1/1;
+  border:0.5vw solid #3b82f6;border-radius:2vw;overflow:hidden;background:#000;
+}
+#camara video{width:100%!important;height:100%!important;object-fit:cover}
+body.modo-camara #camara{display:block}
+body.modo-camara .icono{display:none}
+
+/* Botón para alternar Lector USB / Cámara (abajo al centro) */
+.boton-modo{
+  position:fixed;left:50%;bottom:2vw;transform:translateX(-50%);
+  background:#1e293b;color:#fff;border:0.25vw solid #475569;border-radius:999px;
+  font:inherit;font-size:clamp(16px,2vw,36px);padding:1vw 3vw;
+  cursor:pointer!important;   /* el body oculta el cursor; aquí sí lo mostramos */
+}
+.boton-modo:active{background:#334155}
+
+/* Aviso de errores de cámara */
+.aviso{
+  position:fixed;top:2vw;left:50%;transform:translateX(-50%);max-width:90vw;
+  background:#7f1d1d;color:#fff;border-radius:1vw;padding:1vw 2.5vw;
+  font-size:clamp(16px,2vw,36px);text-align:center;display:none;
+}
+.aviso.visible{display:block}
+
+/* ---------- Input oculto para el lector USB ----------
+   NO usamos display:none porque un elemento oculto así no puede
+   recibir foco. Lo dejamos invisible pero presente. */
+#lector{
+  position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;
+  border:0;outline:0;background:transparent;
+}
+</style>
+</head>
+<body>
+
+<!-- PASO 1: pantalla de espera -->
+<section id="pantalla-espera" class="pantalla activa">
+  <div class="icono" aria-hidden="true">
+    <div class="anillo"></div>
+    <svg viewBox="0 0 200 130" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round">
+      <rect x="8" y="8" width="184" height="114" rx="14"/>
+      <circle cx="60" cy="52" r="16"/>
+      <path d="M34 98c4-16 16-24 26-24s22 8 26 24"/>
+      <path d="M112 44h56M112 66h56M112 88h36"/>
+    </svg>
+  </div>
+  <!-- PASO 3: aquí html5-qrcode dibuja el video de la cámara -->
+  <div id="camara"></div>
+  <h1 class="titulo">Acerca tu credencial</h1>
+  <p class="subtitulo">Código QR o de barras</p>
+</section>
+
+<!-- PASO 4: pantalla de resultado (la llena mostrarResultado()) -->
+<section id="pantalla-resultado" class="pantalla">
+  <div class="res-icono" id="res-icono"></div>
+  <div class="res-titulo" id="res-titulo"></div>
+  <div class="res-persona" id="res-persona">
+    <img class="res-foto" id="res-foto" alt="">
+    <div>
+      <div class="res-nombre" id="res-nombre"></div>
+      <div class="res-detalle" id="res-detalle"></div>
+    </div>
+  </div>
+  <div class="res-motivo" id="res-motivo"></div>
+  <div class="res-permiso" id="res-permiso"></div>
+  <div class="res-hora" id="res-hora"></div>
+</section>
+
+<!-- Kiosco y modo configurados (se cambian con ?kiosco=K-PUERTA1&modo=entrada) -->
+<div class="etiqueta-kiosco" id="etiqueta-kiosco"></div>
+
+<!-- PASO 3: botón para alternar entre lector USB y cámara, y aviso de errores -->
+<button class="boton-modo" id="boton-modo" type="button">Usar cámara</button>
+<div class="aviso" id="aviso" role="alert"></div>
+
+<!-- Reloj y estado del lector -->
+<div class="estado"><span class="punto" id="punto"></span><span id="estado-texto">Revisando lector…</span></div>
+<div class="reloj"><div class="hora" id="hora"></div><div class="fecha" id="fecha"></div></div>
+
+<!-- PASO 2: input oculto. inputmode="none" evita que salga el teclado en tablets -->
+<input id="lector" type="text" inputmode="none" autocomplete="off" autocapitalize="off"
+       autocorrect="off" spellcheck="false" aria-hidden="true" tabindex="-1" autofocus>
+
+<!-- Librería local (kiosco/lib/): así la demo funciona aunque no haya internet -->
+<script src="lib/html5-qrcode.min.js"></script>
+
+<script>
+/* =========================================================
+   KIOSCO - lógica (pasos 1, 2 y 3)
+   ========================================================= */
+
+const $ = (id) => document.getElementById(id);
+const lector = $('lector');
+
+/* Cambia de pantalla: solo la que tenga ese id queda activa */
+function mostrar(id) {
+  document.querySelectorAll('.pantalla').forEach((p) => {
+    p.classList.toggle('activa', p.id === id);
+  });
+}
+
+/* ---------- Reloj (zona horaria de Mazatlán) ---------- */
+function actualizarReloj() {
+  const ahora = new Date();
+  $('hora').textContent = ahora.toLocaleTimeString('es-MX', {
+    hour: '2-digit', minute: '2-digit', timeZone: 'America/Mazatlan'
+  });
+  $('fecha').textContent = ahora.toLocaleDateString('es-MX', {
+    weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Mazatlan'
+  });
+}
+actualizarReloj();
+setInterval(actualizarReloj, 1000);
+
+/* ---------- Foco permanente del input del lector ----------
+   El lector USB funciona como un teclado: "escribe" el código y
+   manda Enter. Si el input pierde el foco, lo escrito se pierde,
+   así que lo recuperamos en cuanto pase cualquier cosa. */
+let bloquearFoco = false; // el menú oculto (paso 6) lo pondrá en true mientras esté abierto
+
+function enfocar() {
+  if (!bloquearFoco && document.activeElement !== lector) {
+    lector.focus({ preventScroll: true });
+  }
+  // El punto verde indica que el lector realmente puede escribir
+  const listo = document.activeElement === lector && document.hasFocus();
+  $('punto').classList.toggle('ok', listo);
+  $('estado-texto').textContent = listo ? 'Lector listo' : 'Toca la pantalla para activar el lector';
+}
+
+lector.addEventListener('blur', () => setTimeout(enfocar, 10)); // se perdió el foco: recuperarlo
+document.addEventListener('click', enfocar);
+document.addEventListener('touchstart', enfocar, { passive: true });
+window.addEventListener('focus', enfocar);
+document.addEventListener('visibilitychange', enfocar);
+setInterval(enfocar, 1000); // red de seguridad
+enfocar();
+
+/* ---------- Pantalla completa ----------
+   El navegador solo la permite después de un toque/clic del usuario.
+   Para la demo es mejor F11 o abrir Chrome con --kiosk. */
+let yaPidioPantallaCompleta = false;
+document.addEventListener('click', () => {
+  if (yaPidioPantallaCompleta) return;
+  yaPidioPantallaCompleta = true;
+  const el = document.documentElement;
+  if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+});
+
+/* ---------- Lectura del código del lector USB ----------
+   El lector escribe muy rápido (menos de 100 ms entre teclas).
+   Si pasa más de 500 ms desde la última tecla, borramos lo anterior:
+   así una tecla suelta no se mezcla con el siguiente escaneo. */
+let ultimaTecla = 0;
+
+lector.addEventListener('keydown', (e) => {
+  const ahora = Date.now();
+
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const codigo = lector.value.trim();
+    lector.value = '';
+    if (codigo) procesarCodigo(codigo, 'lector');
+    return;
+  }
+
+  if (ahora - ultimaTecla > 500) lector.value = '';
+  ultimaTecla = ahora;
+});
+
+/* =========================================================
+   PASO 4: enviar el código a POST /api/scan y mostrar el resultado
+   ========================================================= */
+
+/* localStorage puede fallar (incógnito, bloqueado): nunca debe tumbar el kiosco */
+function leerLS(clave) { try { return localStorage.getItem(clave); } catch (e) { return null; } }
+function guardarLS(clave, valor) { try { localStorage.setItem(clave, valor); } catch (e) {} }
+
+/* Configuración del kiosco. Se pasa una vez por la URL y se recuerda:
+     kiosco/index.html?kiosco=K-PUERTA1&modo=entrada
+   modo: "entrada" | "salida" | "mixto" (por defecto mixto) */
+const params = new URLSearchParams(location.search);
+const MODOS = ['entrada', 'salida', 'mixto'];
+const KIOSCO_ID = params.get('kiosco') || leerLS('kiosco_id') || 'K-PUERTA1';
+const MODO = MODOS.includes(params.get('modo')) ? params.get('modo')
+           : (MODOS.includes(leerLS('kiosco_modo')) ? leerLS('kiosco_modo') : 'mixto');
+guardarLS('kiosco_id', KIOSCO_ID);
+guardarLS('kiosco_modo', MODO);
+$('etiqueta-kiosco').textContent = `${KIOSCO_ID} · modo ${MODO}`;
+
+/* Textos grandes que se muestran según el resultado y el motivo */
+const TITULOS = { ingreso: 'Bienvenido', egreso: 'Hasta pronto', rechazado: 'Acceso denegado', repetido: 'Ya registrado' };
+const ICONOS  = { verde: '✔', rojo: '✖', ambar: '!' };
+const MOTIVOS = {
+  no_registrada:  'Credencial no registrada',
+  inactiva:       'Credencial inactiva — acude a Servicios Escolares',
+  externo:        'Visitante externo — pendiente de confirmar',
+  repetido:       'Ya se registró hace unos segundos',
+  ya_dentro:      'Ya estás dentro — usa el kiosco de salida',
+  sin_conexion:   'Sin conexión con el servidor — avisa al guardia'
+};
+/* Tiempo en pantalla: los rechazos se quedan un poco más para que se lean */
+const DURACION = { verde: 2500, ambar: 3500, rojo: 4000 };
+const TIEMPO_MAX_SERVIDOR = 5000; // ms; si el servidor no contesta, mostramos error
+
+let temporizador = null;
+let ocupado = false; // true mientras se procesa/muestra un resultado: ignora lecturas nuevas
+
+/* Avatar con iniciales (sin internet) cuando el usuario no tiene foto */
+function avatar(nombre) {
+  const ini = String(nombre || '?').split(' ').filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="#334155"/>` +
+    `<text x="50%" y="54%" font-family="Arial" font-size="80" fill="#fff" text-anchor="middle" dominant-baseline="middle">${ini}</text></svg>`;
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+
+/* Pequeño sonido distinto para aceptado / rechazado (Web Audio, sin archivos) */
+let audio = null;
+function pitido(color) {
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    const tonos = color === 'verde' ? [880] : color === 'ambar' ? [660, 660] : [220, 180];
+    tonos.forEach((f, i) => {
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.frequency.value = f; o.type = color === 'rojo' ? 'square' : 'sine';
+      g.gain.value = 0.15;
+      o.connect(g); g.connect(audio.destination);
+      const t = audio.currentTime + i * 0.18;
+      o.start(t); o.stop(t + 0.14);
+    });
+  } catch (e) { /* sin audio no pasa nada */ }
+}
+
+/* Pinta la respuesta de /api/scan:
+   {resultado, color, motivo, usuario:{id,nombre,foto_url,carrera,grupo,tipo}|null, fecha_hora} */
+function mostrarResultado(r) {
+  const color = ['verde', 'rojo', 'ambar'].includes(r.color) ? r.color : 'rojo';
+  const pantalla = $('pantalla-resultado');
+  pantalla.className = 'pantalla activa ' + color;
+
+  $('res-icono').textContent = ICONOS[color];
+  $('res-titulo').textContent = TITULOS[r.resultado] || 'Acceso denegado';
+
+  const u = r.usuario;
+  $('res-persona').style.display = u ? 'flex' : 'none';
+  if (u) {
+    const foto = $('res-foto');
+    foto.onerror = () => { foto.onerror = null; foto.src = avatar(u.nombre); };
+    foto.src = u.foto_url || avatar(u.nombre);
+    $('res-nombre').textContent = u.nombre;           // textContent: nunca se interpreta como HTML
+    $('res-detalle').textContent = [u.carrera, u.grupo ? 'Grupo ' + u.grupo : null, u.tipo]
+      .filter(Boolean).join(' · ');
+  }
+
+  $('res-motivo').style.display = r.motivo ? 'block' : 'none';
+  $('res-motivo').textContent = MOTIVOS[r.motivo] || r.motivo || '';
+
+  // permiso: null | {nombre, hasta} -> "🌙 Permiso: Hackatón hasta 08:00 (08/11)"
+  const pm = r.permiso;
+  $('res-permiso').style.display = pm ? 'block' : 'none';
+  if (pm) {
+    const h = String(pm.hasta || '').replace('T', ' ');
+    $('res-permiso').textContent = `🌙 Permiso: ${pm.nombre} hasta ${h.slice(11, 16)} (${h.slice(8, 10)}/${h.slice(5, 7)})`;
+  }
+
+  // La hora viene como "YYYY-MM-DD HH:MM:SS"; mostramos HH:MM
+  $('res-hora').textContent = r.fecha_hora ? String(r.fecha_hora).replace('T', ' ').slice(11, 16) : '';
+
+  mostrar('pantalla-resultado');
+  pitido(color);
+
+  clearTimeout(temporizador);
+  temporizador = setTimeout(() => {
+    pantalla.className = 'pantalla';
+    mostrar('pantalla-espera');
+    ocupado = false;
+    enfocar();
+  }, DURACION[color]);
+}
+
+/* Normaliza el código leído.
+   El QR trae codigo_credencial de 12 caracteres, ej. "K7Q2-M9XD-4TPA".
+   OJO: el lector USB "teclea" como teclado en inglés; si Windows está en
+   español, el guion puede llegar como ' o ? y las letras en minúscula.
+   Si quedan exactamente 12 letras/números, rearmamos "XXXX-XXXX-XXXX". */
+function normalizarCodigo(txt) {
+  const limpio = String(txt).trim().toUpperCase();
+  const solo = limpio.replace(/[^A-Z0-9]/g, '');
+  if (solo.length === 12 && /[^A-Z0-9]/.test(limpio)) {
+    return `${solo.slice(0, 4)}-${solo.slice(4, 8)}-${solo.slice(8)}`;
+  }
+  return limpio;
+}
+
+/* Envía el código al servidor. "origen" (lector/camara) solo se usa para el log */
+async function procesarCodigo(codigo, origen) {
+  if (ocupado) return;           // la cámara lee varias veces por segundo; solo tomamos la primera
+  ocupado = true;
+  codigo = normalizarCodigo(codigo);
+  console.log(`[kiosco] ${origen}: ${codigo}`);
+
+  // Pantalla de "procesando" mientras responde el servidor (normalmente < 200 ms)
+  $('pantalla-resultado').className = 'pantalla cargando';
+  $('res-icono').textContent = '…';
+  $('res-titulo').textContent = 'Verificando';
+  $('res-persona').style.display = 'none';
+  $('res-motivo').style.display = 'none';
+  $('res-permiso').style.display = 'none';
+  $('res-hora').textContent = '';
+  mostrar('pantalla-resultado');
+
+  // AbortController: si el servidor se cuelga, no dejamos el kiosco congelado
+  const control = new AbortController();
+  const limite = setTimeout(() => control.abort(), TIEMPO_MAX_SERVIDOR);
+
+  try {
+    const resp = await fetch('/api/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ codigo, kiosco_id: KIOSCO_ID, modo: MODO }),
+      // foto_base64 es opcional en el contrato; se puede agregar después
+      signal: control.signal
+    });
+    const datos = await resp.json();
+    if (!resp.ok && !datos.resultado) throw new Error(datos.error || 'HTTP ' + resp.status);
+    mostrarResultado(datos);
+  } catch (err) {
+    console.error('[kiosco] error en /api/scan:', err);
+    mostrarResultado({ resultado: 'rechazado', color: 'rojo', motivo: 'sin_conexion', usuario: null, fecha_hora: null });
+  } finally {
+    clearTimeout(limite);
+  }
+}
+
+/* =========================================================
+   PASO 3: lectura con cámara (html5-qrcode)
+   Lee QR y códigos de barras. El lector USB sigue funcionando
+   al mismo tiempo: el input oculto nunca deja de tener el foco.
+   ========================================================= */
+
+let escaner = null;        // instancia de Html5Qrcode
+let camaraActiva = false;
+
+function mostrarAviso(texto) {
+  const a = $('aviso');
+  a.textContent = texto;
+  a.classList.add('visible');
+  setTimeout(() => a.classList.remove('visible'), 6000);
+}
+
+/* Cada vez que la cámara detecta un código llega aquí */
+function alLeerConCamara(textoDecodificado) {
+  procesarCodigo(textoDecodificado.trim(), 'camara');
+}
+
+async function iniciarCamara() {
+  // La cámara del navegador solo funciona en HTTPS o en localhost
+  if (!window.isSecureContext) {
+    mostrarAviso('La cámara necesita HTTPS o localhost. Usa el lector USB o abre el kiosco con https://');
+    return false;
+  }
+
+  const F = Html5QrcodeSupportedFormats;
+  escaner = new Html5Qrcode('camara', {
+    formatsToSupport: [F.QR_CODE, F.CODE_128, F.CODE_39, F.EAN_13, F.EAN_8],
+    useBarCodeDetectorIfSupported: true, // usa el detector nativo del navegador si existe (más rápido)
+    verbose: false
+  });
+
+  const config = {
+    fps: 10,
+    // Recuadro rectangular: sirve para QR y también para códigos de barras (que son anchos)
+    qrbox: (ancho, alto) => ({ width: Math.floor(ancho * 0.85), height: Math.floor(alto * 0.55) })
+  };
+
+  // Primero la cámara trasera; si no existe (laptop, tablet de frente), probamos la frontal
+  const intentos = [{ facingMode: 'environment' }, { facingMode: 'user' }];
+  for (const camara of intentos) {
+    try {
+      await escaner.start(camara, config, alLeerConCamara, () => {});
+      return true;
+    } catch (err) {
+      if (err && /NotAllowed|Permission/i.test(String(err))) {
+        mostrarAviso('Permiso de cámara denegado. Actívalo en el candado de la barra de direcciones.');
+        return false;
+      }
+    }
+  }
+  mostrarAviso('No se pudo abrir la cámara.');
+  return false;
+}
+
+async function detenerCamara() {
+  if (!escaner) return;
+  try { await escaner.stop(); escaner.clear(); } catch (e) { /* ya estaba detenida */ }
+  escaner = null;
+}
+
+/* Alterna entre "Lector USB" y "Cámara" y recuerda la elección */
+async function cambiarFuente(usarCamara) {
+  if (usarCamara) {
+    document.body.classList.add('modo-camara'); // muestra el recuadro antes de iniciar
+    const ok = await iniciarCamara();
+    if (!ok) {                                   // falló: volvemos al lector USB
+      document.body.classList.remove('modo-camara');
+      camaraActiva = false;
+    } else {
+      camaraActiva = true;
+    }
+  } else {
+    await detenerCamara();
+    document.body.classList.remove('modo-camara');
+    camaraActiva = false;
+  }
+  $('boton-modo').textContent = camaraActiva ? 'Usar lector USB' : 'Usar cámara';
+  guardarLS('kiosco_fuente', camaraActiva ? 'camara' : 'lector');
+  enfocar(); // el input oculto recupera el foco
+}
+
+$('boton-modo').addEventListener('click', () => cambiarFuente(!camaraActiva));
+
+/* Al abrir la página, retomar la última fuente usada (por defecto: lector USB).
+   Nota: el navegador puede pedir permiso de cámara la primera vez. */
+if (leerLS('kiosco_fuente') === 'camara') cambiarFuente(true);
+</script>
+</body>
+</html>

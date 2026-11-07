@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<!-- =====================================================================
+     index.html — Pantalla principal del guardia (celular o laptop).
+     Muestra: contador de personas dentro, gráficas de aforo, feed de
+     accesos en vivo, alertas, botón de cierre y chat con la IA.
+     La lógica está en js/dashboard.js y js/chat.js.
+     ===================================================================== -->
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aforo en vivo</title>
+  <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+  <header class="barra">
+    <h1><span id="conexion" class="punto" title="Conexión en vivo"></span> Aforo en vivo</h1>
+    <nav>
+      <a href="index.html" class="activo">En vivo</a>
+      <a href="usuarios.html">Usuarios</a>
+      <a href="permisos.html">Permisos</a>
+      <a href="reportes.html">Reportes</a>
+    </nav>
+  </header>
+
+  <main class="rejilla">
+    <!-- 1. Contador grande -->
+    <section class="tarjeta contador">
+      <div id="total" class="numero">–</div>
+      <div class="etiqueta">personas dentro del plantel</div>
+      <div class="etiqueta" id="con-permiso" style="font-size:14px"></div>
+      <div class="detalle" id="actualizado" style="font-size:12px;color:var(--suave)"></div>
+      <div class="acciones">
+        <!-- 6. Cierre manual (lo mismo que hace el cron a las 00:00) -->
+        <button id="btn-cierre" class="peligro">Ejecutar cierre ahora</button>
+      </div>
+    </section>
+
+    <!-- Revisión de las 23:30: quién sigue dentro SIN permiso nocturno -->
+    <section class="tarjeta" id="tarjeta-sin-permiso">
+      <h2>Dentro sin permiso <span id="num-sin-permiso" class="badge ambar">0</span>
+        <button id="btn-sin-permiso" style="float:right;padding:3px 10px;font-size:12px">Actualizar</button></h2>
+      <p class="detalle" style="font-size:12px;color:var(--suave);margin:0 0 8px">
+        A estas personas se les marcará salida automática a las 00:00.</p>
+      <ul id="sin-permiso" class="lista"><li class="vacio">Cargando…</li></ul>
+    </section>
+
+    <!-- 3a. Feed de últimos accesos -->
+    <section class="tarjeta">
+      <h2>Últimos accesos</h2>
+      <ul id="feed" class="lista"><li class="vacio">Esperando lecturas…</li></ul>
+    </section>
+
+    <!-- 3b. Panel de alertas -->
+    <section class="tarjeta">
+      <h2>Alertas <span id="num-alertas" class="badge rojo">0</span></h2>
+      <ul id="alertas" class="lista"><li class="vacio">Sin alertas</li></ul>
+    </section>
+
+    <!-- 2. Gráficas -->
+    <section class="tarjeta">
+      <h2>Dentro por carrera</h2>
+      <div class="grafica"><canvas id="g-carrera"></canvas></div>
+    </section>
+    <section class="tarjeta">
+      <h2>Dentro por grupo</h2>
+      <div class="grafica"><canvas id="g-grupo"></canvas></div>
+    </section>
+    <section class="tarjeta">
+      <h2>Entradas por hora (hoy)</h2>
+      <div class="grafica"><canvas id="g-horas"></canvas></div>
+    </section>
+  </main>
+
+  <!-- 8. Chat con la IA -->
+  <button id="chat-boton" title="Preguntar a la IA">💬</button>
+  <div id="chat-ventana" role="dialog" aria-label="Asistente de aforo">
+    <header>Asistente de aforo <button id="chat-cerrar" style="padding:2px 8px">✕</button></header>
+    <div id="chat-mensajes">
+      <div class="msg ia">Hola, pregúntame sobre el aforo. Ej.: “¿Cuántos alumnos de Sistemas están adentro?”</div>
+    </div>
+    <div class="sugerencias">
+      <button data-p="¿Cuántos alumnos de Sistemas están adentro?">Sistemas dentro</button>
+      <button data-p="¿Qué carrera tiene más gente dentro?">Carrera con más gente</button>
+      <button data-p="¿Cuántas entradas hubo hoy entre 7 y 9 de la mañana?">Entradas 7–9 h</button>
+    </div>
+    <form id="chat-form">
+      <input id="chat-texto" placeholder="Escribe tu pregunta…" autocomplete="off">
+      <button class="primario">Enviar</button>
+    </form>
+  </div>
+
+  <!-- Librerías: Chart.js local (para red sin internet) y, si no existe, desde CDN -->
+  <script src="vendor/chart.umd.min.js"></script>
+  <script>
+    window.Chart || document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>');
+  </script>
+  <!-- Cliente de Socket.IO: lo sirve automáticamente el servidor -->
+  <script src="/socket.io/socket.io.js"></script>
+
+  <script src="js/util.js"></script>
+  <script src="js/mock.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/chat.js"></script>
+</body>
+</html>

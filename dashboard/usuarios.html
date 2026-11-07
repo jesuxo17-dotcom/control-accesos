@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<!-- =====================================================================
+     usuarios.html — Catálogo de usuarios: buscar, ver, agregar y editar
+     (foto, estatus, datos del tutor). Usa GET/POST /api/usuarios y
+     PUT /api/usuarios/:id. Lógica en js/usuarios.js
+     ===================================================================== -->
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Catálogo de usuarios</title>
+  <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+  <header class="barra">
+    <h1>Catálogo de usuarios</h1>
+    <nav>
+      <a href="index.html">En vivo</a>
+      <a href="usuarios.html" class="activo">Usuarios</a>
+      <a href="permisos.html">Permisos</a>
+      <a href="reportes.html">Reportes</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="tarjeta">
+      <div class="filtros">
+        <div><label for="f-buscar">Buscar</label><input id="f-buscar" placeholder="Nombre, matrícula o credencial"></div>
+        <div><label for="f-tipo">Tipo</label>
+          <select id="f-tipo"><option value="">Todos</option><option>alumno</option><option>docente</option><option>administrativo</option></select></div>
+        <div><label for="f-estatus">Estatus</label>
+          <select id="f-estatus"><option value="">Todos</option><option>activo</option><option>inactivo</option><option>externo</option></select></div>
+        <div><button id="btn-nuevo" class="primario" style="width:100%">+ Agregar usuario</button></div>
+      </div>
+      <p id="resumen" style="color:var(--suave);font-size:13px"></p>
+      <div class="tabla-scroll">
+        <table>
+          <thead><tr><th></th><th>Nombre</th><th>Matrícula</th><th>Credencial</th><th>Tipo</th><th>Carrera</th><th>Grupo</th><th>Estatus</th><th></th></tr></thead>
+          <tbody id="tabla"><tr><td colspan="9" class="vacio">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Formulario de alta / edición -->
+  <dialog id="dlg">
+    <form id="form" method="dialog">
+      <h2 id="dlg-titulo" style="margin-top:0">Usuario</h2>
+      <div class="vista-foto" style="margin-bottom:12px">
+        <img id="vista" alt="Foto">
+        <div style="flex:1">
+          <label for="foto_archivo">Foto (se reduce automáticamente)</label>
+          <input type="file" id="foto_archivo" accept="image/*" capture="user">
+        </div>
+      </div>
+      <div class="campos">
+        <div><label for="nombre">Nombre completo *</label><input id="nombre" name="nombre" required></div>
+        <div><label for="matricula">Matrícula *</label><input id="matricula" name="matricula" required></div>
+        <div><label for="codigo_credencial">Código de credencial (va en el QR) *</label>
+          <div style="display:flex;gap:6px">
+            <input id="codigo_credencial" name="codigo_credencial" required style="font-family:monospace">
+            <button type="button" id="btn-reponer" class="peligro" title="Genera un código nuevo; el anterior deja de servir">Reponer</button>
+          </div></div>
+        <div><label for="tipo">Tipo</label>
+          <select id="tipo" name="tipo"><option>alumno</option><option>docente</option><option>administrativo</option></select></div>
+        <div><label for="carrera_id">Carrera</label><select id="carrera_id" name="carrera_id"></select></div>
+        <div><label for="grupo">Grupo</label><input id="grupo" name="grupo" placeholder="Ej. 5A"></div>
+        <div><label for="estatus">Estatus</label>
+          <select id="estatus" name="estatus"><option>activo</option><option>inactivo</option><option>externo</option></select></div>
+        <div><label for="foto_url">URL de foto (opcional)</label><input id="foto_url" name="foto_url"></div>
+        <div><label for="tutor_email">Correo del tutor</label><input id="tutor_email" name="tutor_email" type="email"></div>
+        <div><label for="tutor_telefono">Teléfono del tutor</label><input id="tutor_telefono" name="tutor_telefono" type="tel"></div>
+        <div class="check"><input id="notificar_tutor" name="notificar_tutor" type="checkbox"><label for="notificar_tutor" style="margin:0">Notificar al tutor</label></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+        <button type="button" id="btn-cancelar">Cancelar</button>
+        <button type="submit" class="primario" id="btn-guardar">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="js/util.js"></script>
+  <script src="js/mock.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/usuarios.js"></script>
+</body>
+</html>

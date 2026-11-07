@@ -1,0 +1,175 @@
+/* =====================================================================
+   estilos.css — Estilos compartidos del dashboard.
+   Diseño "mobile first": pensado primero para el celular del guardia
+   y luego se acomoda en columnas en pantallas grandes.
+   Soporta modo claro y oscuro según la configuración del teléfono.
+   ===================================================================== */
+
+:root {
+  --fondo: #f3f5f8;
+  --tarjeta: #ffffff;
+  --texto: #1b2330;
+  --suave: #637083;
+  --borde: #dfe4ea;
+  --primario: #1f5fbf;
+  --verde: #15803d;   --verde-bg: #dcfce7;
+  --rojo: #c62828;    --rojo-bg: #fde2e2;
+  --ambar: #b45309;   --ambar-bg: #fef3c7;
+  --sombra: 0 1px 3px rgba(0,0,0,.08);
+  --radio: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: #0f141b; --tarjeta: #18202b; --texto: #e7ecf2; --suave: #93a1b3; --borde: #2a3543;
+    --primario: #5b9bff;
+    --verde: #4ade80; --verde-bg: #12301f;
+    --rojo: #f87171;  --rojo-bg: #3a1717;
+    --ambar: #fbbf24; --ambar-bg: #3a2a0c;
+    --sombra: none;
+  }
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--fondo); color: var(--texto);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 15px;
+}
+a { color: var(--primario); }
+
+/* ---------- Encabezado y navegación ---------- */
+header.barra {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px;
+  padding: 10px 16px; background: var(--tarjeta); border-bottom: 1px solid var(--borde);
+}
+header.barra h1 { font-size: 17px; margin: 0; flex: 1; }
+header.barra nav { display: flex; gap: 6px; flex-wrap: wrap; }
+header.barra nav a {
+  text-decoration: none; padding: 6px 10px; border-radius: 8px; color: var(--suave); font-weight: 600;
+}
+header.barra nav a.activo { background: var(--primario); color: #fff; }
+.punto { width: 10px; height: 10px; border-radius: 50%; background: var(--rojo); display: inline-block; }
+.punto.ok { background: var(--verde); }
+
+/* Aviso visible cuando se están usando datos falsos */
+body.modo-mock::before {
+  content: "MODO DEMO — datos simulados (servidor no disponible)";
+  display: block; text-align: center; font-size: 12px; font-weight: 700;
+  background: var(--ambar-bg); color: var(--ambar); padding: 4px;
+}
+
+main { padding: 16px; max-width: 1300px; margin: 0 auto; }
+
+/* ---------- Tarjetas y rejilla ---------- */
+.tarjeta {
+  background: var(--tarjeta); border: 1px solid var(--borde); border-radius: var(--radio);
+  box-shadow: var(--sombra); padding: 14px; min-width: 0;
+}
+.tarjeta h2 { font-size: 15px; margin: 0 0 10px; color: var(--suave); text-transform: uppercase; letter-spacing: .04em; }
+.rejilla { display: grid; gap: 14px; grid-template-columns: 1fr; }
+@media (min-width: 800px)  { .rejilla { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1150px) { .rejilla { grid-template-columns: repeat(3, 1fr); } }
+.ancho-2 { grid-column: 1 / -1; }
+@media (min-width: 1150px) { .ancho-2 { grid-column: span 2; } }
+
+/* ---------- Contador grande ---------- */
+.contador { text-align: center; padding: 22px 14px; }
+.contador .numero {
+  font-size: clamp(72px, 22vw, 140px); font-weight: 800; line-height: 1;
+  font-variant-numeric: tabular-nums; transition: transform .2s;
+}
+.contador .numero.pulso { transform: scale(1.08); }
+.contador .etiqueta { color: var(--suave); font-size: 16px; margin-top: 6px; }
+.contador .acciones { margin-top: 14px; }
+
+/* ---------- Gráficas ---------- */
+.grafica { position: relative; height: 240px; }
+
+/* ---------- Feed en vivo ---------- */
+.lista { list-style: none; margin: 0; padding: 0; max-height: 420px; overflow-y: auto; }
+.lista li {
+  display: flex; gap: 10px; align-items: center; padding: 8px; border-radius: 10px;
+  border-left: 5px solid var(--borde); margin-bottom: 6px; background: var(--fondo);
+  animation: entra .35s ease;
+}
+@keyframes entra { from { opacity: 0; transform: translateY(-6px); } }
+.lista li.verde { border-left-color: var(--verde); }
+.lista li.rojo  { border-left-color: var(--rojo); background: var(--rojo-bg); }
+.lista li.ambar { border-left-color: var(--ambar); background: var(--ambar-bg); }
+.lista .info { flex: 1; min-width: 0; }
+.lista .nombre { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lista .detalle { font-size: 13px; color: var(--suave); }
+.lista .hora { font-size: 12px; color: var(--suave); font-variant-numeric: tabular-nums; }
+.foto { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.vacio { color: var(--suave); text-align: center; padding: 18px; }
+
+/* ---------- Insignias de estado ---------- */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 12px; font-weight: 700; }
+.badge.verde, .badge.activo, .badge.ingreso { background: var(--verde-bg); color: var(--verde); }
+.badge.rojo, .badge.inactivo, .badge.egreso { background: var(--rojo-bg); color: var(--rojo); }
+.badge.ambar, .badge.externo, .badge.automatico { background: var(--ambar-bg); color: var(--ambar); }
+
+/* ---------- Botones y formularios ---------- */
+button, .boton {
+  font: inherit; font-weight: 600; cursor: pointer; border: 1px solid var(--borde);
+  background: var(--tarjeta); color: var(--texto); padding: 9px 14px; border-radius: 10px;
+}
+button.primario { background: var(--primario); border-color: var(--primario); color: #fff; }
+button.peligro  { background: var(--rojo); border-color: var(--rojo); color: #fff; }
+button:disabled { opacity: .6; cursor: wait; }
+input, select, textarea {
+  font: inherit; width: 100%; padding: 9px 10px; border-radius: 10px;
+  border: 1px solid var(--borde); background: var(--fondo); color: var(--texto);
+}
+label { display: block; font-size: 13px; color: var(--suave); margin-bottom: 4px; }
+.filtros { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); align-items: end; }
+.campos { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 600px) { .campos { grid-template-columns: 1fr 1fr; } }
+.campos > *, .filtros > * { min-width: 0; }   /* evita que inputs de fecha desborden la tarjeta */
+.check { display: flex; gap: 8px; align-items: center; }
+.check input { width: auto; }
+
+/* ---------- Tablas (con scroll horizontal en celular) ---------- */
+.tabla-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { padding: 8px; text-align: left; border-bottom: 1px solid var(--borde); white-space: nowrap; }
+th { color: var(--suave); font-size: 12px; text-transform: uppercase; }
+td .foto { width: 36px; height: 36px; }
+
+/* ---------- Ventana modal ---------- */
+dialog {
+  border: none; border-radius: var(--radio); padding: 18px; width: min(640px, 94vw);
+  background: var(--tarjeta); color: var(--texto);
+}
+dialog::backdrop { background: rgba(0,0,0,.5); }
+.vista-foto { display: flex; gap: 12px; align-items: center; }
+.vista-foto img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; }
+
+/* ---------- Chat flotante ---------- */
+#chat-boton {
+  position: fixed; right: 16px; bottom: 16px; z-index: 30; width: 58px; height: 58px;
+  border-radius: 50%; font-size: 26px; background: var(--primario); color: #fff; border: none;
+  box-shadow: 0 4px 14px rgba(0,0,0,.25);
+}
+#chat-ventana {
+  position: fixed; right: 16px; bottom: 86px; z-index: 30; width: min(380px, calc(100vw - 32px));
+  height: min(520px, 70vh); display: none; flex-direction: column;
+  background: var(--tarjeta); border: 1px solid var(--borde); border-radius: var(--radio);
+  box-shadow: 0 8px 30px rgba(0,0,0,.25);
+}
+#chat-ventana.abierto { display: flex; }
+#chat-ventana header { padding: 10px 14px; font-weight: 700; border-bottom: 1px solid var(--borde); display: flex; justify-content: space-between; }
+#chat-mensajes { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.msg { max-width: 85%; padding: 8px 11px; border-radius: 12px; line-height: 1.35; white-space: pre-wrap; }
+.msg.yo  { align-self: flex-end; background: var(--primario); color: #fff; }
+.msg.ia  { align-self: flex-start; background: var(--fondo); }
+.msg.esperando { opacity: .6; font-style: italic; }
+#chat-form { display: flex; gap: 6px; padding: 10px; border-top: 1px solid var(--borde); }
+.sugerencias { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 12px 8px; }
+.sugerencias button { font-size: 12px; padding: 4px 8px; }
+
+/* ---------- Toasts ---------- */
+#toasts { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); z-index: 50; display: flex; flex-direction: column; gap: 8px; }
+.toast { padding: 10px 16px; border-radius: 10px; background: #1b2330; color: #fff; font-weight: 600; box-shadow: 0 4px 14px rgba(0,0,0,.3); }
+.toast.ok { background: var(--verde); } .toast.error { background: var(--rojo); }

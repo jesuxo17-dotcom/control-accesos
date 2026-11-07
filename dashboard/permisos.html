@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<!-- =====================================================================
+     permisos.html — Permisos nocturnos (eventos donde la gente se queda
+     toda la noche). Lista los permisos (GET /api/permisos) y crea nuevos
+     para personas sueltas, una carrera o un grupo (POST /api/permisos).
+     Quien tiene permiso vigente NO recibe la salida automática de las 00:00.
+     Lógica en js/permisos.js
+     ===================================================================== -->
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Permisos nocturnos</title>
+  <link rel="stylesheet" href="css/estilos.css">
+  <style>
+    .personas { max-height: 220px; overflow-y: auto; border: 1px solid var(--borde); border-radius: 10px; padding: 6px; }
+    .personas label { display: flex; gap: 8px; align-items: center; padding: 4px; color: var(--texto); font-size: 14px; margin: 0; }
+    .personas input { width: auto; }
+    .alcance { display: flex; gap: 6px; flex-wrap: wrap; }
+    .alcance button.activo { background: var(--primario); color: #fff; border-color: var(--primario); }
+  </style>
+</head>
+<body>
+  <header class="barra">
+    <h1>Permisos nocturnos</h1>
+    <nav>
+      <a href="index.html">En vivo</a>
+      <a href="usuarios.html">Usuarios</a>
+      <a href="permisos.html" class="activo">Permisos</a>
+      <a href="reportes.html">Reportes</a>
+    </nav>
+  </header>
+
+  <main class="rejilla">
+    <!-- Formulario de nuevo permiso -->
+    <section class="tarjeta">
+      <h2>Nuevo permiso</h2>
+      <form id="form">
+        <div class="campos" style="grid-template-columns:1fr">
+          <div><label for="nombre">Nombre del evento *</label><input id="nombre" required placeholder="Ej. Hackatón LinceCode"></div>
+          <div class="campos">
+            <div><label for="desde">Desde *</label><input id="desde" type="datetime-local" required></div>
+            <div><label for="hasta">Hasta *</label><input id="hasta" type="datetime-local" required></div>
+          </div>
+          <div>
+            <label>¿A quién aplica?</label>
+            <div class="alcance" id="alcance">
+              <button type="button" data-a="personas" class="activo">Personas</button>
+              <button type="button" data-a="carrera">Carrera</button>
+              <button type="button" data-a="grupo">Grupo</button>
+            </div>
+          </div>
+          <div id="caja-personas">
+            <input id="buscar" placeholder="Buscar persona…" style="margin-bottom:6px">
+            <div class="personas" id="personas"></div>
+            <div class="detalle" id="num-sel" style="font-size:12px;color:var(--suave);margin-top:4px">0 seleccionadas</div>
+          </div>
+          <div id="caja-carrera" hidden><label for="carrera_id">Carrera</label><select id="carrera_id"></select></div>
+          <div id="caja-grupo" hidden><label for="grupo">Grupo</label><select id="grupo"></select></div>
+        </div>
+        <button class="primario" id="btn-crear" style="margin-top:14px;width:100%">Crear permiso</button>
+      </form>
+    </section>
+
+    <!-- Lista de permisos -->
+    <section class="tarjeta ancho-2">
+      <h2>Permisos registrados</h2>
+      <div class="filtros" style="margin-bottom:8px">
+        <div><label for="f-estado">Mostrar</label>
+          <select id="f-estado">
+            <option value="">Todos</option><option value="vigente">Vigentes</option>
+            <option value="proximo">Próximos</option><option value="vencido">Vencidos</option>
+          </select></div>
+        <div><label for="f-texto">Buscar</label><input id="f-texto" placeholder="Evento o persona"></div>
+      </div>
+      <div class="tabla-scroll">
+        <table>
+          <thead><tr><th>Estado</th><th>Evento</th><th>Persona</th><th>Desde</th><th>Hasta</th><th>Autorizó</th></tr></thead>
+          <tbody id="tabla"><tr><td colspan="6" class="vacio">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/util.js"></script>
+  <script src="js/mock.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/permisos.js"></script>
+</body>
+</html>
