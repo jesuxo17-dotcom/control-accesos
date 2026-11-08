@@ -31,7 +31,10 @@ const TIPOS_ALERTA = {
   ...MOTIVOS
 };
 // Anomalías "de vigilancia" (ámbar); los rechazos del kiosco van en rojo
-const ALERTAS_AMBAR = ['permiso_vencido', 'horario_nocturno', 'estancia_larga', 'kioscos_distintos', 'externo', 'repetido'];
+const ALERTAS_AMBAR = ['permiso_vencido', 'horario_nocturno', 'estancia_larga', 'kioscos_distintos', 'externo', 'repetido',
+  'confirmacion_manual', 'revision_gafete'];   // gafete leído por foto: el guardia confirma o revisa
+TIPOS_ALERTA.confirmacion_manual = 'Confirmar identidad a mano';
+TIPOS_ALERTA.revision_gafete = 'Gafete para revisión';
 // Icono SVG (estilo Lucide) para permisos nocturnos; texto fijo, no viene de la BD
 const ICONO_LUNA = '<svg class="ico" style="width:12px;height:12px;vertical-align:-1px" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></svg>';
 const MAX_FEED = 25;    // cuántos accesos se muestran
@@ -54,6 +57,20 @@ function crearGraficas() {
   // Sin animación si el usuario pidió movimiento reducido
   const reducido = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const primario = css('--primario');
+  // Colores de la sección del canvas (una banda oscura usa sus propios tonos)
+  const tema = id => {
+    const st = getComputedStyle($(id));
+    const v = (n, d) => st.getPropertyValue(n).trim() || d;
+    return { color: v('--g-texto', css('--suave')), linea: v('--g-linea', css('--borde')),
+      barra: v('--g-barra', primario), relleno: v('--g-relleno', css('--primario-suave')) };
+  };
+  const conTema = (id, opts) => {
+    const t = tema(id);
+    const sc = {};
+    for (const [k, ax] of Object.entries(opts.scales || {})) sc[k] = { ...ax, ticks: { ...(ax.ticks || {}), color: t.color },
+      grid: ax.grid?.display === false ? ax.grid : { ...(ax.grid || {}), color: t.linea } };
+    return { ...opts, color: t.color, scales: sc };
+  };
   // Ejes discretos (estilo suizo): solo líneas guía del eje de valores, sin bordes
   const ejeValor = { beginAtZero: true, ticks: { precision: 0 }, border: { display: false }, grid: { color: css('--borde') } };
   const ejeCat = { grid: { display: false }, border: { display: false } };
@@ -61,7 +78,7 @@ function crearGraficas() {
     responsive: true, maintainAspectRatio: false, animation: { duration: reducido ? 0 : 250 },
     plugins: {
       legend: { display: false },
-      tooltip: { backgroundColor: '#0f172a', padding: 10, cornerRadius: 8, displayColors: false,
+      tooltip: { backgroundColor: '#1c1917', padding: 10, cornerRadius: 8, displayColors: false,
         titleFont: { weight: '600' }, callbacks: { label: c => `${c.formattedValue} personas` } }
     },
     scales: { x: ejeCat, y: ejeValor }
@@ -70,43 +87,53 @@ function crearGraficas() {
   // Barras horizontales: los nombres de carrera son largos y así caben en el celular
   gCarrera = new Chart($('g-carrera'), {
     type: 'bar',
-    data: { labels: [], datasets: [{ data: [], backgroundColor: primario, borderRadius: 6, maxBarThickness: 26 }] },
-    options: { ...base, indexAxis: 'y', scales: { x: ejeValor, y: ejeCat } }
+    data: { labels: [], datasets: [{ data: [], backgroundColor: tema('g-carrera').barra, borderRadius: 6, maxBarThickness: 26 }] },
+    options: conTema('g-carrera', { ...base, indexAxis: 'y', scales: { x: ejeValor, y: { ...ejeCat, ticks: {
+      // En celular, los nombres largos se recortan con … en vez de salirse de la tarjeta
+      callback(v) { const t = this.getLabelForValue(v); const max = innerWidth < 600 ? 16 : 34; return t.length > max ? t.slice(0, max - 1) + '…' : t; } } } } })
   });
 
   gGrupo = new Chart($('g-grupo'), {
     type: 'bar',
-    data: { labels: [], datasets: [{ data: [], backgroundColor: primario, borderRadius: 6, maxBarThickness: 32 }] },
-    options: base
+    data: { labels: [], datasets: [{ data: [], backgroundColor: tema('g-grupo').barra, borderRadius: 6, maxBarThickness: 32 }] },
+    options: conTema('g-grupo', base)
   });
 
   gHoras = new Chart($('g-horas'), {
     type: 'line',
     data: {
       labels: entradasPorHora.map((_, h) => h + 'h'),
-      datasets: [{ data: entradasPorHora, borderColor: primario, borderWidth: 2,
-        backgroundColor: css('--primario-suave'), fill: true, cubicInterpolationMode: 'monotone',   // curva suave sin bajar de 0
+      datasets: [{ data: entradasPorHora, borderColor: tema('g-horas').barra, borderWidth: 2,
+        backgroundColor: tema('g-horas').relleno, fill: true, cubicInterpolationMode: 'monotone',   // curva suave sin bajar de 0
         pointRadius: 0, pointHoverRadius: 5, pointHitRadius: 12 }]
     },
-    options: { ...base, interaction: { mode: 'index', intersect: false },
+    options: conTema('g-horas', { ...base, interaction: { mode: 'index', intersect: false },
       plugins: { ...base.plugins, tooltip: { ...base.plugins.tooltip,
         callbacks: { label: c => `${c.formattedValue} entradas` } } },
-      scales: { x: { ...ejeCat, ticks: { maxTicksLimit: 8 } }, y: ejeValor } }
+      scales: { x: { ...ejeCat, ticks: { maxTicksLimit: 8 } }, y: ejeValor } })
   });
 }
 
 /** Pinta contador + gráficas con la forma de GET /api/aforo */
 function pintarAforo(a) {
   const num = $('total');
-  if (num.textContent !== String(a.total)) {
+  if (!num.dataset.contado && !matchMedia('(prefers-reduced-motion: reduce)').matches && a.total > 0) {
+    // primera carga: cuenta de 0 a la cifra en 600 ms (ease-out)
+    num.dataset.contado = '1';
+    const t0 = performance.now(), fin = a.total;
+    const paso = t => { const p = Math.min(1, (t - t0) / 600); num.textContent = Math.round(fin * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(paso); };
+    requestAnimationFrame(paso);
+  } else if (num.textContent !== String(a.total)) {
+    num.dataset.contado = '1';
     num.textContent = a.total;
     num.classList.add('pulso');
     setTimeout(() => num.classList.remove('pulso'), 200);
   }
-  $('actualizado').textContent = 'Actualizado ' + horaDe(ahoraLocal());
+  $('actualizado').textContent = ($('actualizado').dataset.prefijo ?? 'Actualizado ') + horaDe(ahoraLocal());
   // Campo nuevo: cuántos de los que están dentro tienen permiso nocturno vigente
   // (el icono de luna lo pone el CSS de .chip-permiso; si queda vacío, el chip se oculta)
   $('con-permiso').textContent = a.con_permiso ? `${a.con_permiso} con permiso nocturno` : '';
+  if ($('personas')) $('personas').textContent = a.total === 1 ? 'persona' : 'personas';
 
   gCarrera.data.labels = a.por_carrera.map(x => x.carrera);
   gCarrera.data.datasets[0].data = a.por_carrera.map(x => x.dentro);
@@ -115,6 +142,12 @@ function pintarAforo(a) {
   gGrupo.data.labels = a.por_grupo.map(x => x.grupo || 'Sin grupo');
   gGrupo.data.datasets[0].data = a.por_grupo.map(x => x.dentro);
   gGrupo.update();
+}
+
+/** Sin entradas en el día: un mensaje en lugar de una gráfica en blanco */
+function mostrarHorasVacia() {
+  const p = $('horas-vacia');
+  if (p) p.hidden = entradasPorHora.some(n => n > 0);
 }
 
 /** Entradas por hora: se calcula con los eventos de hoy */
@@ -126,34 +159,73 @@ async function cargarHorasPico() {
     if (e.tipo === 'ingreso' && aLocal(e.fecha_hora).startsWith(hoy)) entradasPorHora[horaNum(e.fecha_hora)]++;
   }
   gHoras.update();
+  mostrarHorasVacia();
+  // La línea de tiempo arranca con lo más reciente de hoy (sin animar: ya estaba ahí)
+  const feed = $('feed');
+  if (feed && !feed.querySelector('.ent')) {
+    // Pasada la medianoche todavía no hay lecturas de hoy: también se muestran las de ayer
+    const ayer = ahoraLocal(new Date(Date.now() - 864e5)).slice(0, 10);
+    const previos = eventos.length >= 8 ? eventos : await API.eventos({ desde: ayer, hasta: hoy }).catch(() => eventos);
+    const recientes = [...previos].sort((a, b) => String(a.fecha_hora).localeCompare(String(b.fecha_hora))).slice(-8);
+    for (const e of recientes) agregarAlFeed({
+      usuario: { nombre: e.nombre, carrera: e.carrera, grupo: e.grupo, foto_url: e.foto_url },
+      resultado: e.tipo, color: e.tipo === 'ingreso' ? 'verde' : 'salida', fecha_hora: e.fecha_hora, kiosco_id: e.kiosco_id
+    }, false);
+  }
 }
 
 // ---------------------------------------------------------------------
 // FEED DE ACCESOS
 // ---------------------------------------------------------------------
-function agregarAlFeed(ev) {
+/** "hace 3 min", "hace 2 h", "ayer 21:30" (hora de Mazatlán) */
+function haceCuanto(fh) {
+  const t = Date.parse(aLocal(fh).replace(' ', 'T') + '-07:00');
+  const s = Math.max(0, (Date.now() - t) / 1000);
+  if (!Number.isFinite(s)) return horaDe(fh).slice(0, 5);
+  if (s < 50) return 'ahora';
+  if (s < 3600) return `hace ${Math.round(s / 60)} min`;
+  if (s < 6 * 3600) return `hace ${Math.floor(s / 3600)} h`;
+  return (aLocal(fh).slice(0, 10) === hoyLocal() ? 'hoy ' : 'ayer ') + horaDe(fh).slice(0, 5);
+}
+function iniciales(nombre = '?') {
+  return nombre.split(' ').filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase() || '?';
+}
+// Tonos de la paleta UAdeO para el círculo de iniciales (todos con blanco a 4.5:1 o más)
+const TONOS = ['#8b1d46', '#6b1535', '#5f1830', '#7a5a00', '#9c2c50'];
+
+/** Una tarjeta de la línea de tiempo. nueva = llegó en vivo (se anima); si no, es de la carga inicial */
+function agregarAlFeed(ev, nueva = true) {
   const lista = $('feed');
   lista.querySelector('.vacio')?.remove();
 
-  const u = ev.usuario;
-  const titulo = { ingreso: 'Entrada', egreso: 'Salida', rechazado: 'Rechazado', repetido: 'Repetido' }[ev.resultado] || ev.resultado;
-  const detalle = [u?.carrera, u?.grupo, ev.motivo ? MOTIVOS[ev.motivo] || ev.motivo : null, ev.kiosco_id]
-    .filter(Boolean).map(esc).join(' · ') +
-    // Campo nuevo de /api/scan: permiso: null | {nombre, hasta}
-    (ev.permiso ? ` <span class="badge indigo">${ICONO_LUNA} ${esc(ev.permiso.nombre)} hasta ${esc(fechaCorta(ev.permiso.hasta))}</span>` : '');
+  const u = ev.usuario || {};
+  const nombre = u.nombre || 'Credencial desconocida';
+  const tipo = { ingreso: 'Entró', egreso: 'Salió', rechazado: 'Rechazado', repetido: 'Repetido' }[ev.resultado] || ev.resultado;
+  // Los mismos datos que el correo: nombre de la BD, movimiento, hora exacta guardada y kiosco
+  const area = [u.carrera || (u.tipo && u.tipo !== 'alumno' ? u.tipo : null), u.grupo, ev.kiosco_id].filter(Boolean).map(esc).join(' · ') || 'Sin carrera registrada';
+  let h = 0; for (const c of nombre) h = (h * 31 + c.charCodeAt(0)) % 997;
+  const cara = u.foto_url
+    ? `<img class="ent__foto" src="${esc(u.foto_url)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'ent__ini',textContent:'${esc(iniciales(nombre))}'}))">`
+    : `<span class="ent__ini" style="background:${TONOS[h % TONOS.length]}" aria-hidden="true">${esc(iniciales(nombre))}</span>`;
 
   const li = document.createElement('li');
-  li.className = ev.color || 'verde';
+  li.className = `ent ent--${esc(ev.color || 'verde')}${nueva ? ' ent--nueva' : ''}`;
   li.innerHTML = `
-    ${imgUsuario(u || { nombre: '?' })}
-    <div class="info">
-      <div class="nombre">${esc(u?.nombre || 'Credencial desconocida')}</div>
-      <div class="detalle"><span class="badge ${esc(ev.color)}">${esc(titulo)}</span> ${detalle}</div>
+    ${cara}
+    <div class="ent__info">
+      <p class="ent__nombre">${esc(nombre)}</p>
+      <p class="ent__area">${area}</p>
     </div>
-    <div class="hora">${horaDe(ev.fecha_hora)}</div>`;
+    <div class="ent__lado">
+      <span class="ent__tipo">${esc(tipo)} ${horaDe(ev.fecha_hora)}</span>
+      <time class="ent__hace" datetime="${esc(aLocal(ev.fecha_hora))}" data-fh="${esc(ev.fecha_hora)}">${haceCuanto(ev.fecha_hora)}</time>
+    </div>`;
   lista.prepend(li);
+  if (nueva) li.addEventListener('animationend', () => li.classList.remove('ent--nueva'), { once: true });
   while (lista.children.length > MAX_FEED) lista.lastElementChild.remove();
 }
+// "hace X min" se mantiene al día
+setInterval(() => document.querySelectorAll('.ent__hace[data-fh]').forEach(t => { t.textContent = haceCuanto(t.dataset.fh); }), 30000);
 
 // ---------------------------------------------------------------------
 // ALERTAS
@@ -266,6 +338,9 @@ $('btn-cierre').addEventListener('click', async (e) => {
 // ARRANQUE
 // ---------------------------------------------------------------------
 (async function iniciar() {
+  // Las gráficas miden sus etiquetas: esperar a que cargue la fuente (máx. 1.5 s)
+  // para que no se corten ("Tecnologías de la Información").
+  if (document.fonts?.ready) await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 1500))]);
   crearGraficas();
   try {
     pintarAforo(await API.aforo());   // esta primera llamada también detecta si hay servidor
@@ -279,12 +354,12 @@ $('btn-cierre').addEventListener('click', async (e) => {
   setInterval(cargarSinPermiso, 60000);
 
   API.conectar({
-    estado: ok => $('conexion').classList.toggle('ok', ok),
+    estado: ok => { const c = $('conexion'); c.classList.toggle('ok', ok); if (c.textContent.trim()) c.textContent = ok ? 'En vivo' : 'Sin conexión'; },
     aforo: pintarAforo,
     evento: ev => {
       agregarAlFeed(ev);
       alertaDesdeEvento(ev);
-      if (ev.resultado === 'ingreso') { entradasPorHora[horaNum(ev.fecha_hora)]++; gHoras.update(); }
+      if (ev.resultado === 'ingreso') { entradasPorHora[horaNum(ev.fecha_hora)]++; gHoras.update(); mostrarHorasVacia(); }
     },
     alerta: al => agregarAlerta(al)
   });

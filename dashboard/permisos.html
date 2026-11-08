@@ -13,7 +13,7 @@
   <title>Permisos nocturnos</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&family=JetBrains+Mono:wght@400..600&display=swap">
   <link rel="stylesheet" href="css/estilos.css">
   <style>
     .personas { max-height: 220px; overflow-y: auto; border: 1px solid var(--borde); border-radius: 10px; padding: 6px; }
@@ -22,19 +22,23 @@
     .alcance { display: flex; gap: 6px; flex-wrap: wrap; }
     .alcance button.activo { background: var(--primario); color: #fff; border-color: var(--primario); }
   </style>
+  <!-- sesión del panel: sin sesión manda a login.html antes de mostrar nada -->
+  <script src="js/sesion.js"></script>
 </head>
 <body>
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
   <header class="barra">
     <h1>Permisos nocturnos</h1>
     <nav aria-label="Secciones">
       <a href="index.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>En vivo</a>
       <a href="usuarios.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Usuarios</a>
       <a href="permisos.html" class="activo" aria-current="page"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></svg>Permisos</a>
+      <a href="tutores.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="m16 11 2 2 4-4"/></svg>Tutores</a>
       <a href="reportes.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>Reportes</a>
     </nav>
   </header>
 
-  <main class="rejilla">
+  <main id="contenido" tabindex="-1" class="rejilla">
     <!-- Formulario de nuevo permiso -->
     <section class="tarjeta">
       <h2>Nuevo permiso</h2>
@@ -89,5 +93,6 @@
   <script src="js/mock.js"></script>
   <script src="js/api.js"></script>
   <script src="js/permisos.js"></script>
+  <script src="js/chat.js"></script>
 </body>
 </html>

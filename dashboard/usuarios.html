@@ -11,21 +11,25 @@
   <title>Catálogo de usuarios</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&family=JetBrains+Mono:wght@400..600&display=swap">
   <link rel="stylesheet" href="css/estilos.css">
+  <!-- sesión del panel: sin sesión manda a login.html antes de mostrar nada -->
+  <script src="js/sesion.js"></script>
 </head>
 <body>
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
   <header class="barra">
     <h1>Catálogo de usuarios</h1>
     <nav aria-label="Secciones">
       <a href="index.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>En vivo</a>
       <a href="usuarios.html" class="activo" aria-current="page"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Usuarios</a>
       <a href="permisos.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></svg>Permisos</a>
+      <a href="tutores.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="m16 11 2 2 4-4"/></svg>Tutores</a>
       <a href="reportes.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>Reportes</a>
     </nav>
   </header>
 
-  <main>
+  <main id="contenido" tabindex="-1">
     <section class="tarjeta">
       <div class="filtros">
         <div><label for="f-buscar">Buscar</label><input id="f-buscar" placeholder="Nombre, matrícula o credencial"></div>
@@ -38,7 +42,7 @@
       <p id="resumen" style="color:var(--suave);font-size:13px"></p>
       <div class="tabla-scroll">
         <table>
-          <thead><tr><th></th><th>Nombre</th><th>Matrícula</th><th>Credencial</th><th>Tipo</th><th>Carrera</th><th>Grupo</th><th>Estatus</th><th></th></tr></thead>
+          <thead><tr><th></th><th>Nombre</th><th>Matrícula</th><th>Credencial</th><th>Tipo</th><th>Carrera</th><th>Grupo</th><th>Sem.</th><th>Estatus</th><th></th></tr></thead>
           <tbody id="tabla"><tr><td colspan="9" class="vacio">Cargando…</td></tr></tbody>
         </table>
       </div>
@@ -68,6 +72,9 @@
           <select id="tipo" name="tipo"><option>alumno</option><option>docente</option><option>administrativo</option></select></div>
         <div><label for="carrera_id">Carrera</label><select id="carrera_id" name="carrera_id"></select></div>
         <div><label for="grupo">Grupo</label><input id="grupo" name="grupo" placeholder="Ej. 5A"></div>
+        <div><label for="email">Correo del usuario (aquí le llega el aviso de entrada y salida)</label><input id="email" name="email" type="email" autocomplete="off" placeholder="nombre@correo.com"></div>
+        <div><label for="semestre">Semestre</label>
+          <select id="semestre" name="semestre"><option value="">Sin semestre</option><option value="1">1.º</option><option value="2">2.º</option><option value="3">3.º</option><option value="4">4.º</option><option value="5">5.º</option><option value="6">6.º</option><option value="7">7.º</option><option value="8">8.º</option><option value="9">9.º</option><option value="10">10.º</option><option value="11">11.º</option><option value="12">12.º</option></select></div>
         <div><label for="estatus">Estatus</label>
           <select id="estatus" name="estatus"><option>activo</option><option>inactivo</option><option>externo</option></select></div>
         <div><label for="foto_url">URL de foto (opcional)</label><input id="foto_url" name="foto_url"></div>
@@ -86,5 +93,6 @@
   <script src="js/mock.js"></script>
   <script src="js/api.js"></script>
   <script src="js/usuarios.js"></script>
+  <script src="js/chat.js"></script>
 </body>
 </html>

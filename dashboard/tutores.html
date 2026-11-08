@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<!-- =====================================================================
+     tutores.html — Vínculos de LinceTutores (app de padres y tutores).
+     Los tutores se registran en /tutores/ y piden ligar a sus hijos por
+     matrícula. Aquí seguridad revisa cada solicitud y la aprueba solo
+     después de comprobar identidad y parentesco. Con el vínculo aprobado,
+     el tutor ve los movimientos reales y recibe avisos (correo / celular).
+     Lógica en js/tutores.js
+     ===================================================================== -->
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tutores</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&family=JetBrains+Mono:wght@400..600&display=swap">
+  <link rel="stylesheet" href="css/estilos.css">
+  <style>
+    .solicitud { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px 20px; align-items: center;
+      padding: 14px 16px; border: 1px solid var(--borde); border-radius: 12px; background: var(--hundido); margin-bottom: 10px; }
+    .solicitud h3 { margin: 0; font-size: 16px; }
+    .solicitud .datos { font-size: 14px; color: var(--suave); display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; }
+    .solicitud .datos b { color: var(--texto); font-weight: 600; }
+    .solicitud .acciones { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; }
+    .solicitud .check { font-size: 13px; color: var(--texto); margin: 0; }
+    .coincide { margin: 8px 0 0; font-size: 14px; padding: 6px 10px; border-radius: 8px; display: inline-block; }
+    .coincide.si { background: var(--verde-bg); color: var(--verde); }
+    .coincide.si b { color: var(--texto); }
+    .coincide.no { background: var(--ambar-bg); color: var(--ambar); }
+    .solicitud.saliendo { animation: sale 220ms ease-out forwards; }
+    @keyframes sale { to { opacity: 0; transform: translateX(12px); } }
+    @media (max-width: 640px) { .solicitud { grid-template-columns: 1fr; } .solicitud .acciones { justify-content: flex-start; } }
+    @media (prefers-reduced-motion: reduce) { .solicitud.saliendo { animation-duration: .01ms; } }
+    .enlace-app { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+    .enlace-app code { font-size: 15px; padding: 6px 10px; border-radius: 8px; background: var(--hundido); border: 1px solid var(--borde); }
+  </style>
+  <!-- sesión del panel: sin sesión manda a login.html antes de mostrar nada -->
+  <script src="js/sesion.js"></script>
+</head>
+<body>
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+  <header class="barra">
+    <h1>Tutores</h1>
+    <nav aria-label="Secciones">
+      <a href="index.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>En vivo</a>
+      <a href="usuarios.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Usuarios</a>
+      <a href="permisos.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></svg>Permisos</a>
+      <a href="tutores.html" class="activo" aria-current="page"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="m16 11 2 2 4-4"/></svg>Tutores</a>
+      <a href="reportes.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>Reportes</a>
+    </nav>
+  </header>
+
+  <main id="contenido" tabindex="-1" class="rejilla">
+    <section class="tarjeta ancho-todo" aria-labelledby="t-solicitudes">
+      <h2 id="t-solicitudes"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="m16 11 2 2 4-4"/></svg>Solicitudes de vínculo
+        <span id="num-pendientes" class="badge ambar">0</span>
+        <button id="btn-recargar" class="chico der" aria-label="Actualizar solicitudes"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg><span class="txt-boton">Actualizar</span></button></h2>
+      <p class="nota">Aprueba solo después de comprobar en persona (o por un medio oficial) que quien pide el vínculo es madre, padre o tutor del alumno. El tutor da el nombre o la matrícula; aquí ves con qué alumno del padrón coincide.</p>
+      <div id="lista"><p class="vacio">Cargando solicitudes…</p></div>
+    </section>
+
+    <section class="tarjeta ancho-todo" aria-labelledby="t-app">
+      <h2 id="t-app"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>App para padres y tutores</h2>
+      <p class="nota">Los tutores se registran con su teléfono, agregan a sus hijos por matrícula y, una vez aprobado el vínculo, ven las entradas y salidas y reciben avisos por correo o en el celular.</p>
+      <div class="enlace-app"><code id="url-app">/tutores/</code><a class="boton" id="abrir-app" href="/tutores/" target="_blank" rel="noopener">Abrir LinceTutores</a></div>
+    </section>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/util.js"></script>
+  <script src="js/mock.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/tutores.js"></script>
+  <script src="js/chat.js"></script>
+</body>
+</html>

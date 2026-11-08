@@ -17,36 +17,22 @@ const API = (() => {
     document.body.classList.add('modo-mock');
   }
 
-  /* Clave de administrador (ADMIN_KEY del .env del servidor).
-     Las rutas que cambian datos (usuarios, permisos, cierre) exigen la
-     cabecera x-admin-key. Se pide una vez y se guarda solo en esta pestaña
-     (sessionStorage): al cerrar el navegador hay que escribirla de nuevo. */
-  const CLAVE = 'admin_key';
-  function leerClave() { try { return sessionStorage.getItem(CLAVE) || ''; } catch { return ''; } }
-  function guardarClave(v) { try { v ? sessionStorage.setItem(CLAVE, v) : sessionStorage.removeItem(CLAVE); } catch {} }
-
-  /** Petición genérica. Devuelve el JSON ya parseado. */
-  async function pedir(metodo, ruta, cuerpo, reintento = false) {
+  /** Petición genérica con la sesión del panel (sesion.js). Devuelve el JSON ya parseado.
+      401/403 = la sesión venció o no existe: de vuelta a la página de inicio de sesión. */
+  async function pedir(metodo, ruta, cuerpo) {
     if (!modoMock) {
       try {
-        const headers = {};
+        const headers = { ...Sesion.cabecera() };
         if (cuerpo) headers['Content-Type'] = 'application/json';
-        if (metodo !== 'GET' && leerClave()) headers['x-admin-key'] = leerClave();
         const r = await fetch(ruta, {
           method: metodo,
           headers,
           body: cuerpo ? JSON.stringify(cuerpo) : undefined
         });
-        // 403 = falta la clave de administrador o es incorrecta: pedirla y reintentar una vez
-        if (r.status === 403 && !reintento) {
-          const clave = prompt(leerClave()
-            ? 'La clave de administrador no es correcta. Escríbela de nuevo:'
-            : 'Esta acción requiere la clave de administrador (ADMIN_KEY del servidor):');
-          if (!clave) throw new Error('Se necesita la clave de administrador');
-          guardarClave(clave.trim());
-          return pedir(metodo, ruta, cuerpo, true);
+        if (r.status === 401 || r.status === 403) {
+          Sesion.vencida();
+          throw new Error('Tu sesión terminó: vuelve a iniciar sesión');
         }
-        if (r.status === 403) guardarClave('');
         if (r.status === 404 || r.status === 405 || r.status === 501) {
           // La ruta/método todavía no la implementa el backend: solo esta llamada va al mock
           console.warn('[API] 404 en', ruta, '-> respuesta simulada');
@@ -78,7 +64,8 @@ const API = (() => {
    */
   function conectar(handlers) {
     if (!modoMock && typeof io === 'function') {
-      const socket = io();   // se conecta al mismo servidor que sirvió la página
+      const socket = io({ auth: { token: Sesion.token() } });   // mismo servidor; la sesión abre los datos en vivo
+      socket.on('connect_error', e => { if (/no autorizado/.test(e.message)) Sesion.vencida(); });
       socket.on('connect', () => handlers.estado && handlers.estado(true));
       socket.on('disconnect', () => handlers.estado && handlers.estado(false));
       socket.on('evento', d => handlers.evento && handlers.evento(d));
@@ -106,7 +93,10 @@ const API = (() => {
     dentroSinPermiso: ()    => pedir('GET',  '/api/dentro-sin-permiso'),
     cierre:      ()         => pedir('POST', '/api/cierre', {}),
     anomalias:   ()         => pedir('GET',  '/api/anomalias'),
-    chat:        (pregunta) => pedir('POST', '/api/chat', { pregunta }),
+    chat:        (pregunta, historial) => pedir('POST', '/api/chat', { pregunta, historial }),
+    tutoresPendientes: ()   => pedir('GET',  '/api/tutores/pendientes'),
+    aprobarVinculo: (id)    => pedir('POST', `/api/tutores/hijos/${id}/aprobar`, { identidad_y_parentesco_verificados: true }),
+    rechazarVinculo: (id)   => pedir('POST', `/api/tutores/hijos/${id}/rechazar`, {}),
     conectar
   };
 })();

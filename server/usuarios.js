@@ -9,14 +9,16 @@ function codigoAleatorio() {
   const s = [...crypto.randomBytes(12)].map(b => ABC[b % ABC.length]).join('');
   return `${s.slice(0, 4)}-${s.slice(4, 8)}-${s.slice(8)}`;
 }
+// Correo con forma válida (nombre@dominio.algo)
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 function crearRutasUsuarios(db) {
   const router = express.Router();
-  const columnas = ['matricula','codigo_credencial','nombre','tipo','carrera_id','grupo','estatus','foto_url','tutor_email','tutor_telefono','notificar_tutor'];
+  const columnas = ['matricula','codigo_credencial','nombre','tipo','carrera_id','grupo','estatus','foto_url','tutor_email','tutor_telefono','notificar_tutor','semestre','equipo','email'];
   const tipos = ['alumno', 'docente', 'administrativo'];
   const estatus = ['activo', 'inactivo', 'externo'];
   const listado = `SELECT u.id, u.matricula, u.codigo_credencial, u.nombre, u.tipo,
        u.carrera_id, c.nombre AS carrera, u.grupo, u.estatus, u.foto_url,
-       u.notificar_tutor FROM usuarios u LEFT JOIN carreras c ON c.id = u.carrera_id`;
+       u.notificar_tutor, u.semestre, u.equipo, u.email FROM usuarios u LEFT JOIN carreras c ON c.id = u.carrera_id`;
   function validar(datos, completo = false) {
     // El NIP es opcional en el alta: el dashboard no lo captura. Sin NIP, el
     // usuario usa su credencial impresa y no puede pedir QR dinámico (/api/mi-qr)
@@ -27,6 +29,9 @@ function crearRutasUsuarios(db) {
     if (datos.estatus !== undefined && !estatus.includes(datos.estatus)) return 'Estatus inválido';
     if (datos.carrera_id !== undefined && datos.carrera_id !== null && !Number.isInteger(Number(datos.carrera_id))) return 'Carrera inválida';
     if (datos.notificar_tutor !== undefined && ![0, 1, true, false].includes(datos.notificar_tutor)) return 'notificar_tutor inválido';
+    if (datos.semestre !== undefined && datos.semestre !== null && !(Number.isInteger(datos.semestre) && datos.semestre >= 1 && datos.semestre <= 12)) return 'El semestre debe ser un número de 1 a 12';
+    if (datos.email !== undefined && datos.email !== null && datos.email !== '' && !EMAIL.test(String(datos.email).trim())) return 'Correo inválido';
+    if (datos.equipo !== undefined && datos.equipo !== null && (typeof datos.equipo !== 'string' || datos.equipo.length > 60)) return 'Equipo inválido';
     return null;
   }
   router.get('/', (_req, res) => res.json(db.prepare(listado + ' ORDER BY u.nombre').all()));
@@ -36,14 +41,15 @@ function crearRutasUsuarios(db) {
     if (error) return res.status(400).json({ error });
     try {
       const r = db.prepare(`INSERT INTO usuarios
-        (matricula,codigo_credencial,nombre,tipo,carrera_id,grupo,estatus,foto_url,nip,tutor_email,tutor_telefono,notificar_tutor)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+        (matricula,codigo_credencial,nombre,tipo,carrera_id,grupo,estatus,foto_url,nip,tutor_email,tutor_telefono,notificar_tutor,semestre,equipo,email)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
         data.matricula, data.codigo_credencial, data.nombre,
         data.tipo || 'alumno', data.carrera_id ?? null, data.grupo ?? null,
         data.estatus || 'activo', data.foto_url ?? null,
         // Sin NIP: se guarda el hash de uno aleatorio que nadie conoce
         hashNip(data.nip ?? crypto.randomBytes(16).toString('hex')), data.tutor_email ?? null,
-        data.tutor_telefono ?? null, Number(Boolean(data.notificar_tutor))
+        data.tutor_telefono ?? null, Number(Boolean(data.notificar_tutor)),
+        data.semestre ?? null, data.equipo?.trim() || null, String(data.email || '').trim().toLowerCase() || null
       );
       res.status(201).json(db.prepare(listado + ' WHERE u.id = ?').get(r.lastInsertRowid));
     } catch (errorBD) {
@@ -59,7 +65,7 @@ function crearRutasUsuarios(db) {
     const cambios = Object.entries(data).filter(([k, valor]) => columnas.includes(k) && valor !== undefined);
     if (data.nip !== undefined) cambios.push(['nip', hashNip(data.nip)]);
     if (!cambios.length) return res.status(400).json({ error: 'Sin cambios válidos' });
-    const valores = cambios.map(([k, v]) => k === 'notificar_tutor' ? Number(Boolean(v)) : v);
+    const valores = cambios.map(([k, v]) => k === 'notificar_tutor' ? Number(Boolean(v)) : k === 'email' ? (String(v || '').trim().toLowerCase() || null) : v);
     const sql = 'UPDATE usuarios SET ' + cambios.map(([k]) => `${k} = ?`).join(', ') + ' WHERE id = ?';
     try {
       const r = db.prepare(sql).run(...valores, id);

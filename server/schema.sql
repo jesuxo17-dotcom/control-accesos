@@ -18,7 +18,13 @@ CREATE TABLE IF NOT EXISTS usuarios (
   nip TEXT NOT NULL,
   tutor_email TEXT,
   tutor_telefono TEXT,
-  notificar_tutor INTEGER NOT NULL DEFAULT 0 CHECK (notificar_tutor IN (0,1))
+  notificar_tutor INTEGER NOT NULL DEFAULT 0 CHECK (notificar_tutor IN (0,1)),
+  -- Opcionales (asistente de IA): vacíos si no se capturaron. Las bases
+  -- creadas antes de estas columnas las reciben con ALTER TABLE en db.js.
+  semestre INTEGER CHECK (semestre BETWEEN 1 AND 12),
+  equipo TEXT,
+  -- Correo del propio usuario: ahí le llega el aviso de cada entrada y salida en el kiosco
+  email TEXT
 );
 
 CREATE TABLE IF NOT EXISTS eventos (

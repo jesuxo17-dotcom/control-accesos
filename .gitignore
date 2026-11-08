@@ -19,3 +19,10 @@ Thumbs.db
 # Certificados HTTPS locales (mkcert) y fotos generadas por seed.js
 **/certs/
 server/public/fotos/
+
+# taste-skill: estado del gate y perfiles de Chrome
+.taste-skill/
+
+# Capturas de las rondas de diseño y log de correos en modo prueba
+shots/
+server/logs/

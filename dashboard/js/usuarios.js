@@ -54,14 +54,15 @@ function pintar() {
       <td>${esc(u.tipo)}</td>
       <td>${esc(u.carrera || carreras.get(Number(u.carrera_id)) || '')}</td>
       <td>${esc(u.grupo || '')}</td>
+      <td>${u.semestre ? esc(u.semestre) + '.º' : ''}</td>
       <td><span class="badge ${esc(u.estatus)}">${esc(u.estatus)}</span></td>
       <td><button data-id="${u.id}">Editar</button></td>
-    </tr>`).join('') : '<tr><td colspan="9" class="vacio">Sin resultados</td></tr>';
+    </tr>`).join('') : '<tr><td colspan="10" class="vacio">Sin resultados</td></tr>';
 }
 
 // ---------- Formulario ----------
 // Ya no hay QR dinámico, así que el NIP no se captura aquí.
-const CAMPOS = ['nombre', 'matricula', 'codigo_credencial', 'tipo', 'carrera_id', 'grupo', 'estatus',
+const CAMPOS = ['nombre', 'matricula', 'codigo_credencial', 'tipo', 'carrera_id', 'grupo', 'semestre', 'email', 'estatus',
   'foto_url', 'tutor_email', 'tutor_telefono'];
 
 function abrir(u) {
@@ -71,6 +72,9 @@ function abrir(u) {
   if (!u) {
     $('tipo').value = 'alumno'; $('estatus').value = 'activo';
     $('codigo_credencial').value = codigoAleatorio();   // código aleatorio, NUNCA la matrícula
+    // PRUEBAS: carrera al azar ya seleccionada (se puede cambiar antes de guardar)
+    const ids = [...carreras.keys()];
+    if (ids.length) $('carrera_id').value = String(ids[Math.floor(Math.random() * ids.length)]);
   }
   // Al editar, el código no se teclea: solo se cambia con "Reponer" (POST /api/usuarios/:id/reponer)
   $('codigo_credencial').readOnly = !!u;
@@ -111,6 +115,7 @@ $('form').addEventListener('submit', async e => {
   const datos = {};
   for (const c of CAMPOS) datos[c] = $(c).value.trim() || null;
   datos.carrera_id = datos.carrera_id ? Number(datos.carrera_id) : null;
+  datos.semestre = datos.semestre ? Number(datos.semestre) : null;
   datos.notificar_tutor = $('notificar_tutor').checked ? 1 : 0;
   if (editandoId) delete datos.codigo_credencial;   // el código solo cambia con "Reponer"
 

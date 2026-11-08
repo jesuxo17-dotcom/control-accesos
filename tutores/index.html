@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#850926" />
+  <meta name="description" content="LinceTutores — consulta movimientos de prueba y, con autorización, los ingresos y salidas reales de tus hijos." />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <link rel="icon" type="image/png" href="./icons/icon-192.png" />
+  <link rel="stylesheet" href="./styles.css" />
+  <title>LinceTutores · UAdeO</title>
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="topbar">
+      <div class="brand-mini"><img alt="Logo de LinceTutores" src="./icons/logo-lince.png"><span><strong>LinceTutores</strong></span></div>
+      <button class="round-button hide" id="btnLogout" title="Cerrar sesión" aria-label="Cerrar sesión">⇥</button>
+    </header>
+    <main>
+      <section class="view" id="vistaCarga">
+        <div class="loader"></div><p class="center muted">Abriendo LinceTutores…</p>
+      </section>
+      <section class="view hide" id="vistaBienvenida">
+        <div class="hero"><img src="./icons/logo-lince.png" alt="Logo de LinceTutores"><h1>LinceTutores</h1><p>Consulta los ingresos y salidas de tus hijos desde tu computadora o celular.</p></div>
+        <div class="panel">
+          <h2>Iniciar sesión</h2>
+          <form id="formLogin" class="stack">
+            <label>Teléfono <input name="telefono" type="tel" inputmode="tel" autocomplete="tel" placeholder="10 dígitos" required minlength="10" /></label>
+            <label>Contraseña <input name="password" type="password" autocomplete="current-password" placeholder="Tu contraseña" required /></label>
+            <button class="primary" type="submit">Ingresar</button>
+          </form>
+          <p class="center muted small">¿Aún no tienes cuenta?</p>
+          <button class="secondary wide" type="button" id="abrirRegistro">Registrarme como tutor</button>
+        </div>
+      </section>
+      <section class="view hide" id="vistaRegistro">
+        <button class="back" type="button" data-go="bienvenida">← Volver</button>
+        <div class="panel">
+          <h2>Registro de tutor</h2><p class="muted">Crea tu cuenta una vez. Después podrás agregar a todos tus hijos.</p>
+          <form id="formRegistro" class="stack">
+            <label>Nombre completo<input name="nombre" autocomplete="name" placeholder="Nombre y apellidos" required minlength="5" /></label>
+            <label>Número de teléfono<input name="telefono" type="tel" inputmode="tel" autocomplete="tel" placeholder="10 dígitos" minlength="10" required /></label>
+            <label>Correo electrónico (opcional, verificable después)<input name="email" type="email" autocomplete="email" placeholder="tutor@correo.com" /></label>
+            <label>Contraseña<input name="password" type="password" autocomplete="new-password" minlength="8" required placeholder="Mínimo 8 caracteres" /></label>
+            <label>Confirmar contraseña<input name="confirmar" type="password" autocomplete="new-password" minlength="8" required /></label>
+            <p class="info-note">Tus datos se guardarán en el servidor de la escuela. En el modo demostración puedes registrar hijos y simular movimientos sin aprobación. Para mostrar entradas y salidas reales se requiere autorización.</p>
+            <button class="primary" type="submit">Registrarme</button>
+          </form>
+        </div>
+      </section>
+      <section class="view hide" id="vistaInicio">
+        <div class="welcome-card">
+          <div class="welcome-logo"><img src="./icons/logo-lince.png" alt="Logo de LinceTutores" /></div>
+          <div><p class="welcome-eyebrow">Tu espacio de seguimiento</p><h2 id="saludoNombre">Hola</h2><p>Consulta los movimientos de tus hijos desde tu computadora o celular.</p></div>
+        </div>
+        <div class="home-summary" aria-label="Resumen de tu cuenta">
+          <button type="button" data-go="hijos" class="summary-card"><span aria-hidden="true">🎓</span><strong id="resumenHijos">0</strong><small>Mis hijos</small></button>
+          <button type="button" data-go="historial" class="summary-card"><span aria-hidden="true">🔔</span><strong>Avisos</strong><small>Ver historial</small></button>
+        </div>
+        <div class="panel"><h3>¿Qué quieres hacer?</h3>
+          <div class="home-actions"><button class="primary wide" type="button" data-go="hijos">Ver mis hijos</button>
+          <button class="secondary wide" type="button" data-go="cuenta">Configurar Gmail y avisos</button></div>
+          <p class="muted small" style="margin-bottom:0">Los movimientos de demostración siempre aparecen identificados como SIMULACIÓN. Los registros reales solo se muestran con autorización.</p>
+        </div>
+      </section>
+      <section class="view hide" id="vistaHijos">
+        <div class="heading-row"><h2>Mis hijos</h2><span class="counter" id="contadorHijos">0</span></div>
+        <div id="listaHijos" class="stack gap-sm"></div>
+        <button class="outline wide add" id="btnAgregarHijo" type="button">＋ Agregar otro hijo</button>
+        <div class="panel light"><h3>Notificaciones</h3>
+          <p id="estadoPush" class="muted small">Puedes consultar los avisos de demostración desde el celular y probar sonidos con la app abierta.</p>
+          <button class="secondary wide" id="btnActivarPush" type="button">Activar avisos en este teléfono</button>
+          <div class="audio-options">
+            <h4>🔔 Sonidos de entrada y salida</h4>
+            <p id="estadoSonido" class="muted small" role="status">Activa los sonidos cuando tengas la aplicación abierta.</p>
+            <button class="outline wide" id="btnSonidos" type="button">Activar sonidos</button>
+            <div class="audio-test-buttons">
+              <button class="sound-test" id="btnProbarIngreso" type="button">▶ Probar ingreso</button>
+              <button class="sound-test" id="btnProbarEgreso" type="button">▶ Probar salida</button>
+            </div>
+            <p class="muted tiny">Si cierras la app, las notificaciones push pueden usar el sonido predeterminado del teléfono; no se puede imponer este sonido personalizado con la app cerrada. Se requiere HTTPS y avisos push habilitados.</p>
+          </div>
+        </div>
+      </section>
+      <section class="view hide" id="vistaAgregar">
+        <button class="back" type="button" data-go="hijos">← Mis hijos</button>
+        <div class="panel"><h2>Agregar otro hijo</h2><p class="muted">Con su <strong>nombre completo</strong> o su <strong>matrícula</strong> basta. El personal de seguridad confirma que es tu hijo y desde ese momento recibes sus entradas y salidas.</p>
+          <form id="formHijo" class="stack">
+            <label>Nombre completo del hijo<input name="nombre" minlength="5" autocomplete="off" placeholder="Nombre y apellidos" /></label>
+            <p class="small muted" style="margin:-4px 0 0">o bien</p>
+            <label>Matrícula<input name="matricula" minlength="3" autocomplete="off" placeholder="Ej. 25050791" /></label>
+            <div class="info-note"><strong>Modo demostración</strong><p>Podrás crear entradas y salidas simuladas sin esperar ninguna aprobación. Esta modalidad no revela registros reales de estudiantes.</p></div>
+            <button class="primary" type="submit">Guardar hijo</button>
+          </form>
+        </div>
+      </section>
+      <section class="view hide" id="vistaHijo">
+        <button class="back" type="button" data-go="hijos">← Mis hijos</button>
+        <div class="panel child-heading"><div class="big-icon">🎓</div><h2 id="detalleNombre"></h2><div class="muted small" id="detalleMatricula"></div><div id="detalleEstado" class="pill"></div></div>
+        <div class="panel"><h3>Contacto de emergencia <span class="tag">Opcional</span></h3><p class="muted small">Solo para casos relacionados con este hijo. Puedes actualizarlo cuando quieras.</p>
+          <form id="formEmergencia" class="stack">
+            <label>Nombre completo<input name="nombre" required minlength="5" placeholder="Nombre y apellidos" /></label>
+            <label>Parentesco<select name="parentesco" required><option value="">Selecciona uno</option><option>Madre</option><option>Padre</option><option>Abuela</option><option>Abuelo</option><option>Tío</option><option>Tía</option><option>Otro</option></select></label>
+            <label>Número de teléfono<input name="telefono" type="tel" inputmode="tel" required placeholder="10 dígitos" /></label>
+            <button type="submit" class="secondary wide">Guardar contacto de emergencia</button>
+          </form>
+        </div>
+        <div class="panel hide" id="panelDemoMovimientos">
+          <h3>🎬 Probar movimientos</h3>
+          <p class="muted small">Modo DEMOSTRACIÓN: estos botones crean avisos ficticios guardados en SQLite. No afectan el registro real de la universidad. Se puede enviar un correo de prueba al tutor con Gmail cuando su correo esté verificado y los avisos por correo estén activados.</p>
+          <div class="demo-actions">
+            <button type="button" class="primary" id="btnDemoIngreso">Simular entrada</button>
+            <button type="button" class="secondary" id="btnDemoEgreso">Simular salida</button>
+          </div>
+        </div>
+        <div class="panel"><h3>Historial de movimientos</h3><div id="listaMovimientos" class="stack gap-sm"></div></div>
+      </section>
+      <section class="view hide" id="vistaHistorial">
+        <h2>Notificaciones e historial</h2>
+        <p class="muted">Aquí aparecen los avisos reales autorizados y los movimientos de demostración (marcados SIMULACIÓN).</p>
+        <div id="listaAvisos" class="stack gap-sm"></div>
+      </section>
+      <section class="view hide" id="vistaCuenta">
+        <h2>Mi perfil</h2>
+        <div class="panel"><p class="muted small">Tutor registrado</p><h3 id="cuentaNombre"></h3><p id="cuentaTelefono"></p></div>
+        <div class="panel"><h3>Cómo recibir los avisos</h3>
+          <p class="muted small">Los eventos de prueba se muestran en la app y también pueden enviarse por Gmail como SIMULACIÓN si activas el correo y lo verificas. Los avisos reales requieren autorización.</p>
+          <form id="formPreferencias" class="stack">
+            <label>Correo electrónico<input name="email" type="email" placeholder="tutor@correo.com" /></label>
+            <label class="checkline"><input type="checkbox" name="avisos_permitidos" /> Permitir notificaciones automáticas</label>
+            <label class="checkline"><input type="checkbox" name="avisos_email" /> Recibir por correo (requiere verificar correo)</label>
+
+            <label class="checkline"><input type="checkbox" name="avisos_push" /> Avisos en el celular (requiere HTTPS y permiso del navegador)</label>
+            <button class="primary" type="submit">Guardar preferencias</button>
+          </form>
+          <div class="stack" style="margin-top:16px">
+            <p class="muted small" id="correoVerificado">Correo sin verificar</p>
+            <button class="secondary wide" id="btnCodigoCorreo" type="button">Enviar código para verificar correo</button>
+            <label>Código recibido por correo<input id="codigoCorreo" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="6 dígitos" /></label>
+            <button class="secondary wide" id="btnVerificarCorreo" type="button">Confirmar código</button>
+          </div>
+        </div>
+        <div class="panel"><h3>Privacidad y acceso</h3><p class="muted small">Modo demostración sin aprobación: los movimientos se generan de forma simulada y se guardan en una tabla distinta. Los registros reales solo se muestran para vínculos autorizados. Tus datos permanecen en SQLite, en el servidor.</p></div>
+        <button class="secondary wide" id="cerrarSesionCuenta">Cerrar sesión</button>
+      </section>
+    </main>
+    <nav class="navbar hide" id="barraAbajo" aria-label="Navegación principal">
+      <button data-nav="inicio" class="selected" type="button" aria-label="Inicio" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg><span>Inicio</span></button>
+      <button data-nav="hijos" type="button" aria-label="Mis hijos"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M17 10a3 3 0 0 0 0-6M18 14a5 5 0 0 1 3 5v1"/></svg><span>Mis hijos</span></button>
+      <button data-nav="historial" type="button" aria-label="Avisos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 10h18c0-2-3-3-3-10M10 21h4"/></svg><span>Avisos</span></button>
+      <button data-nav="cuenta" type="button" aria-label="Perfil"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg><span>Perfil</span></button>
+    </nav>
+    <div id="mensaje" role="status" aria-live="polite" class="toast hide"></div>
+  </div>
+  <script src="./app.js" defer></script>
+</body>
+</html>

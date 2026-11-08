@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "lincecode-servidor",
   "version": "1.0.0",
   "private": true,
@@ -10,7 +10,7 @@
     "dev": "node --watch server.js",
     "db": "node db.js",
     "seed": "node seed.js",
-    "test": "node --test tests/integration.test.js tests/permisos.test.js"
+    "test": "node --test tests/integration.test.js tests/permisos.test.js tests/gafete.test.js tests/asistente.test.js tests/login.test.js tests/tutores.test.js tests/tutores_scan.test.js tests/notificaciones.test.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.6.0",
@@ -22,6 +22,8 @@
     "node-cron": "^4.2.1",
     "nodemailer": "10.4.0",
     "qrcode": "^1.5.4",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "web-push": "^3.6.7",
+    "zxing-wasm": "^3.1.6"
   }
 }

@@ -9,6 +9,11 @@ const db = new Database(archivo);
 db.pragma('foreign_keys = ON');
 db.pragma('journal_mode = WAL');
 db.exec(fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8'));
+// Bases creadas antes de semestre/equipo: agregar las columnas (quedan vacías)
+const columnasUsuarios = new Set(db.prepare('PRAGMA table_info(usuarios)').all().map(c => c.name));
+if (!columnasUsuarios.has('semestre')) db.exec('ALTER TABLE usuarios ADD COLUMN semestre INTEGER CHECK (semestre BETWEEN 1 AND 12)');
+if (!columnasUsuarios.has('equipo')) db.exec('ALTER TABLE usuarios ADD COLUMN equipo TEXT');
+if (!columnasUsuarios.has('email')) db.exec('ALTER TABLE usuarios ADD COLUMN email TEXT');
 
 // Quién está dentro: su ÚLTIMO evento es ingreso y además
 //   - ese ingreso fue HOY, o

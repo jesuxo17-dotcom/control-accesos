@@ -11,7 +11,7 @@ const { Server } = require('socket.io');
 const { db, obtenerAforo, usuariosDentro, fechaLocal } = require('./db');
 const crearPermisos = require('./permisos');
 const { crearQR } = require('./qr');
-const { exigirAdmin } = require('./seguridad');
+const { exigirAdmin, claveAdminValida, sesionValida, login, logout } = require('./seguridad');
 const crearRutaScan = require('./scan');
 const crearUsuarios = require('./usuarios');
 const crearNotificaciones = require('./notificaciones');
@@ -34,8 +34,43 @@ const io = new Server(servidor, { cors: { origin: '*' } });
 
 // Middleware antes de registrar TODAS las rutas.
 app.use(cors());
-app.use(express.json({ limit: '3mb' }));
+// 6 MB: /api/scan-foto recibe una foto JPEG en base64
+app.use(express.json({ limit: '6mb' }));
+// Detrás del túnel de Cloudflare la IP real llega en X-Forwarded-For (para limitar intentos de login)
+app.set('trust proxy', 'loopback');
+
+// ---------- Acceso al panel ----------
+// Toda la API pide sesión (o x-admin-key) salvo lo que usa el kiosco y el propio login.
+// ---------- LinceTutores (app de padres y tutores) ----------
+// Su API tiene su propia sesión (cookie del tutor); las rutas del plantel (aprobar vínculos)
+// usan exigirAdmin, que acepta la sesión del panel. Se monta antes del candado del panel.
+const crearRutasTutores = require('./tutores');
+const crearGestorAvisos = require('./tutor_avisos');
+const crearEnvioPush = require('./tutor_push');
+app.use('/tutores', express.static(path.join(__dirname, '..', 'tutores')));
+app.use('/api/tutores', crearRutasTutores(db));
+const avisosTutores = crearGestorAvisos(db);
+app.locals.avisosTutores = avisosTutores;
+const tutores = { avisos: avisosTutores, push: crearEnvioPush(db) };
+
+app.post('/api/login', login);
+app.post('/api/logout', logout);
+const RUTAS_PUBLICAS = new Set(['POST /api/scan', 'POST /api/scan-foto', 'POST /api/mi-qr', 'GET /api/estado']);
+app.use('/api', (req, res, next) => {
+  if (RUTAS_PUBLICAS.has(`${req.method} /api${req.path}`) || claveAdminValida(req)) return next();
+  res.status(401).json({ error: 'Inicia sesión en el panel para ver esta información' });
+});
 app.use('/fotos', express.static(path.join(__dirname, 'public', 'fotos')));
+// Lector de códigos del kiosco (zxing-wasm), servido desde node_modules: funciona sin internet.
+const ARCHIVOS_ZXING = {
+  'zxing-reader.js': 'dist/iife/reader/index.js',
+  'zxing_reader.wasm': 'dist/reader/zxing_reader.wasm'
+};
+app.get('/kiosco/vendor/:archivo', (req, res, next) => {
+  const ruta = ARCHIVOS_ZXING[req.params.archivo];
+  if (!ruta) return next();
+  res.sendFile(path.join(__dirname, 'node_modules', 'zxing-wasm', ruta), err => err && next());
+});
 app.use('/kiosco', express.static(path.join(__dirname, '..', 'kiosco')));
 // Chart.js para el dashboard SIN internet: se sirve desde node_modules
 // (dependencia "chart.js" en package.json) en la ruta que espera dashboard/index.html.
@@ -66,7 +101,19 @@ app.get('/', (_req, res) => res.redirect('/dashboard/'));
 // Conservamos la consulta JSON de estado en una ruta independiente.
 app.get('/api/estado', (_req, res) => res.json({ mensaje: 'LinceCode 2026 funcionando', servidor: 'Express', base_datos: 'SQLite', fecha_hora: fechaLocal() }));
 app.get('/api/aforo', (_req, res) => res.json(obtenerAforo()));
-app.use('/api', crearRutaScan(db, io, procesarNotificaciones));
+// Lectura del gafete por foto (respaldo del código de barras). Solo si hay IA_API_KEY.
+let leerGafete = null;
+if (process.env.IA_API_KEY) {
+  const sdk = require('@anthropic-ai/sdk');
+  const Anthropic = sdk.Anthropic || sdk.default || sdk;
+  const clienteVision = new Anthropic({ apiKey: process.env.IA_API_KEY, timeout: 30000, maxRetries: 1 });
+  const { leerGafeteConVision } = require('./gafete');
+  leerGafete = (foto, tipo) => leerGafeteConVision(clienteVision, foto, tipo);
+  console.log('Lectura de gafetes por foto: activa');
+} else {
+  console.log('Lectura de gafetes por foto: desactivada (falta IA_API_KEY); solo código de barras');
+}
+app.use('/api', crearRutaScan(db, io, procesarNotificaciones, leerGafete, tutores));
 
 app.post('/api/mi-qr', (req, res) => {
   const { matricula, nip } = req.body || {};
@@ -116,6 +163,8 @@ app.get('/api/anomalias', (_req, res) => {
 });
 app.post('/api/chat', (_req, res) => res.status(501).json({ respuesta: 'El chat de IA quedará disponible cuando Persona 3 agregue server/ia.js.' }));
 
+// Los datos en vivo (accesos, alertas, aforo) solo llegan al panel con sesión
+io.use((socket, next) => sesionValida(socket.handshake.auth?.token) ? next() : next(new Error('no autorizado')));
 io.on('connection', socket => {
   console.log('Cliente conectado:', socket.id);
   socket.emit('aforo', obtenerAforo());
