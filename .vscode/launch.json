@@ -1,0 +1,24 @@
+{
+  // Arranca el servidor con el botón ▶ de "Run and Debug" (o F5).
+  // Cuando la terminal muestra "Servidor: http://localhost:3000" se abre
+  // el dashboard solo en el navegador.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Servidor LinceCode",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/server/server.js",
+      "cwd": "${workspaceFolder}/server",
+      // Ruta completa por si VS Code se abrió antes de instalar Node
+      "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"],
+      "serverReadyAction": {
+        "pattern": "Servidor: (https?://localhost:[0-9]+)",
+        "uriFormat": "%s",
+        "action": "openExternally"
+      }
+    }
+  ]
+}

@@ -76,6 +76,8 @@ function abrir(u) {
   $('codigo_credencial').readOnly = !!u;
   $('btn-reponer').hidden = !u;
   $('notificar_tutor').checked = u ? !!Number(u.notificar_tutor) : false;
+  // Los datos del tutor no se descargan (privados): al editar, vacío = conservar
+  for (const c of ['tutor_email', 'tutor_telefono']) $(c).placeholder = u ? 'Se conserva el actual si lo dejas vacío' : '';
   $('foto_archivo').value = '';
   actualizarVista();
   $('dlg').showModal();
@@ -116,6 +118,22 @@ $('form').addEventListener('submit', async e => {
   const choca = usuarios.find(u => u.id !== editandoId &&
     ((datos.codigo_credencial && u.codigo_credencial === datos.codigo_credencial) || u.matricula === datos.matricula));
   if (choca) return toast(`La matrícula o credencial ya la tiene ${choca.nombre}`, 'error');
+
+  // Al editar se mandan SOLO los campos que cambiaron. GET /api/usuarios no
+  // devuelve los datos del tutor (son privados), así que si esos campos
+  // quedan vacíos se conservan los que ya tiene guardados el servidor.
+  if (editandoId) {
+    const original = usuarios.find(u => u.id === editandoId) || {};
+    for (const c of Object.keys(datos)) {
+      const antes = original[c] ?? null;
+      let igual;
+      if (c === 'carrera_id') igual = (antes == null ? null : Number(antes)) === datos[c];
+      else if (c === 'notificar_tutor') igual = Number(antes || 0) === datos[c];
+      else igual = String(antes ?? '') === String(datos[c] ?? '');
+      if (igual || ((c === 'tutor_email' || c === 'tutor_telefono') && datos[c] == null)) delete datos[c];
+    }
+    if (!Object.keys(datos).length) { $('dlg').close(); return toast('Sin cambios', 'info'); }
+  }
 
   $('btn-guardar').disabled = true;
   try {

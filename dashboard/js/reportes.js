@@ -1,7 +1,6 @@
 /* =====================================================================
    reportes.js — Lógica de reportes.html
-   - Llena los filtros (carreras y usuarios) con GET /api/aforo y
-     GET /api/usuarios.
+   - Llena los filtros (carreras y usuarios) con GET /api/usuarios.
    - Consulta GET /api/eventos?desde=&hasta=&carrera=&usuario_id=
    - Exporta lo que se ve en la tabla a CSV (UTF-8 con BOM para que
      Excel respete los acentos).
@@ -15,9 +14,11 @@ async function llenarFiltros() {
   $('desde').value = hoy;
   $('hasta').value = hoy;
   try {
-    const [aforo, usuarios] = await Promise.all([API.aforo(), API.usuarios()]);
-    $('carrera').innerHTML += aforo.por_carrera
-      .map(c => `<option value="${esc(c.carrera)}">${esc(c.carrera)}</option>`).join('');
+    const usuarios = await API.usuarios();
+    // Carreras deducidas de los usuarios (el aforo solo trae las que tienen gente dentro)
+    const carreras = [...new Set(usuarios.map(u => u.carrera).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    $('carrera').innerHTML += carreras
+      .map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
     $('usuario_id').innerHTML += usuarios
       .sort((a, b) => a.nombre.localeCompare(b.nombre))
       .map(u => `<option value="${u.id}">${esc(u.nombre)} (${esc(u.matricula)})</option>`).join('');

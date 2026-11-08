@@ -17,7 +17,9 @@ const MOTIVOS = {
   inactiva: 'Credencial inactiva',
   externo: 'Externo (pendiente de confirmar)',
   repetido: 'Lectura repetida (< 60 s)',
-  ya_dentro: 'Ya está dentro (kiosco de entrada)'
+  ya_dentro: 'Ya está dentro (kiosco de entrada)',
+  codigo_vencido: 'QR dinámico vencido o ya usado',
+  sin_ingreso: 'Intentó salir sin entrada registrada'
 };
 // Textos para las alertas que llegan por Socket.IO / anomalías
 const TIPOS_ALERTA = {
@@ -25,8 +27,11 @@ const TIPOS_ALERTA = {
   noche_sin_permiso: 'Salida automática sin permiso',
   horario_nocturno: 'Acceso nocturno',
   estancia_larga: 'Más de 14 h dentro',
-  kioscos_distintos: 'Dos kioscos en < 2 min'
+  kioscos_distintos: 'Dos kioscos en < 2 min',
+  ...MOTIVOS
 };
+// Anomalías "de vigilancia" (ámbar); los rechazos del kiosco van en rojo
+const ALERTAS_AMBAR = ['permiso_vencido', 'horario_nocturno', 'estancia_larga', 'kioscos_distintos', 'externo', 'repetido'];
 // Icono SVG (estilo Lucide) para permisos nocturnos; texto fijo, no viene de la BD
 const ICONO_LUNA = '<svg class="ico" style="width:12px;height:12px;vertical-align:-1px" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></svg>';
 const MAX_FEED = 25;    // cuántos accesos se muestran
@@ -156,8 +161,17 @@ function agregarAlFeed(ev) {
 const alertasVistas = new Set();   // evita duplicados (anomalías se consultan cada minuto)
 let totalAlertas = 0;
 
-/** alerta = {tipo, mensaje, usuario, fecha_hora, color?} */
-function agregarAlerta(al) {
+/** alerta = {tipo, mensaje, usuario, fecha_hora, color?}
+    Ojo: en las alertas de /api/scan "usuario" es un objeto {id,nombre,...} (o null);
+    en las de anomalías es solo el nombre. Aquí se normaliza a texto. */
+function agregarAlerta(alerta) {
+  const al = { ...alerta };
+  if (al.usuario && typeof al.usuario === 'object') al.usuario = al.usuario.nombre;
+  if (!al.usuario) al.usuario = 'Credencial desconocida';
+  // El servidor manda "Escaneo rechazado: no_registrada"; mostramos el texto legible
+  if (/^Escaneo /.test(al.mensaje || '') && MOTIVOS[al.tipo]) al.mensaje = MOTIVOS[al.tipo];
+  if (al.tipo === 'rechazado' && /sin_ingreso/.test(al.mensaje || '')) al.mensaje = MOTIVOS.sin_ingreso;
+  al.color = al.color || (ALERTAS_AMBAR.includes(al.tipo) ? 'ambar' : 'rojo');
   const clave = `${al.tipo}|${al.usuario}|${al.fecha_hora}`;
   if (alertasVistas.has(clave)) return;
   alertasVistas.add(clave);
@@ -166,10 +180,13 @@ function agregarAlerta(al) {
   lista.querySelector('.vacio')?.remove();
   const li = document.createElement('li');
   li.className = al.color || 'rojo';
+  // La etiqueta del tipo solo se agrega si dice algo distinto al mensaje
+  const etiqueta = TIPOS_ALERTA[al.tipo] || al.tipo;
+  const detalle = [al.usuario, etiqueta !== al.mensaje && al.tipo !== 'rechazado' ? etiqueta : null].filter(Boolean);
   li.innerHTML = `
     <div class="info">
       <div class="nombre">${esc(al.mensaje)}</div>
-      <div class="detalle">${esc(al.usuario || '')} · ${esc(TIPOS_ALERTA[al.tipo] || al.tipo)}</div>
+      <div class="detalle">${detalle.map(esc).join(' · ')}</div>
     </div>
     <div class="hora">${horaDe(al.fecha_hora)}</div>`;
   lista.prepend(li);
@@ -196,7 +213,7 @@ async function cargarAnomalias() {
   try {
     const lista = await API.anomalias();
     // Las más viejas primero para que la más reciente quede arriba
-    lista.slice().reverse().forEach(a => agregarAlerta({ ...a, color: 'ambar' }));
+    lista.slice().reverse().forEach(a => agregarAlerta(a));
   } catch (e) { console.warn('Anomalías:', e.message); }
 }
 
@@ -269,7 +286,7 @@ $('btn-cierre').addEventListener('click', async (e) => {
       alertaDesdeEvento(ev);
       if (ev.resultado === 'ingreso') { entradasPorHora[horaNum(ev.fecha_hora)]++; gHoras.update(); }
     },
-    alerta: al => agregarAlerta({ ...al, color: 'ambar' })
+    alerta: al => agregarAlerta(al)
   });
 
   // Si el servidor se reinicia o el celular se bloquea, re-sincronizamos al volver

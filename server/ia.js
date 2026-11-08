@@ -334,7 +334,12 @@ module.exports = function crearRutasIA(db, io) {
   /** Respuesta de respaldo SIN IA (si no hay clave o falla internet en la demo) */
   function respuestaSinIA(pregunta) {
     const a = aforoPorCarrera();
-    const c = a.por_carrera.find(x => normal(pregunta).includes(normal(x.carrera).split(' ')[0]));
+    // La carrera cuyo nombre comparte más palabras con la pregunta (ignorando
+    // "de", "la"...); así "Ingeniería de Software" no se confunde con "Ingeniería Industrial".
+    const palabras = new Set(normal(pregunta).split(/[^a-z0-9]+/).filter(p => p.length > 3));
+    const puntos = x => normal(x.carrera).split(/[^a-z0-9]+/).filter(p => p.length > 3 && palabras.has(p)).length;
+    const c = a.por_carrera.map(x => [x, puntos(x)]).filter(([, n]) => n > 0)
+      .sort((p, q) => q[1] - p[1])[0]?.[0];
     if (c) return `En ${c.carrera} hay ${c.dentro} persona(s) dentro ahora mismo.`;
     return `Ahora hay ${a.total} personas dentro. ` +
       a.por_carrera.filter(x => x.dentro).map(x => `${x.carrera}: ${x.dentro}`).join(', ') + '.';

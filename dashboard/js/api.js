@@ -17,15 +17,36 @@ const API = (() => {
     document.body.classList.add('modo-mock');
   }
 
+  /* Clave de administrador (ADMIN_KEY del .env del servidor).
+     Las rutas que cambian datos (usuarios, permisos, cierre) exigen la
+     cabecera x-admin-key. Se pide una vez y se guarda solo en esta pestaña
+     (sessionStorage): al cerrar el navegador hay que escribirla de nuevo. */
+  const CLAVE = 'admin_key';
+  function leerClave() { try { return sessionStorage.getItem(CLAVE) || ''; } catch { return ''; } }
+  function guardarClave(v) { try { v ? sessionStorage.setItem(CLAVE, v) : sessionStorage.removeItem(CLAVE); } catch {} }
+
   /** Petición genérica. Devuelve el JSON ya parseado. */
-  async function pedir(metodo, ruta, cuerpo) {
+  async function pedir(metodo, ruta, cuerpo, reintento = false) {
     if (!modoMock) {
       try {
+        const headers = {};
+        if (cuerpo) headers['Content-Type'] = 'application/json';
+        if (metodo !== 'GET' && leerClave()) headers['x-admin-key'] = leerClave();
         const r = await fetch(ruta, {
           method: metodo,
-          headers: cuerpo ? { 'Content-Type': 'application/json' } : undefined,
+          headers,
           body: cuerpo ? JSON.stringify(cuerpo) : undefined
         });
+        // 403 = falta la clave de administrador o es incorrecta: pedirla y reintentar una vez
+        if (r.status === 403 && !reintento) {
+          const clave = prompt(leerClave()
+            ? 'La clave de administrador no es correcta. Escríbela de nuevo:'
+            : 'Esta acción requiere la clave de administrador (ADMIN_KEY del servidor):');
+          if (!clave) throw new Error('Se necesita la clave de administrador');
+          guardarClave(clave.trim());
+          return pedir(metodo, ruta, cuerpo, true);
+        }
+        if (r.status === 403) guardarClave('');
         if (r.status === 404 || r.status === 405 || r.status === 501) {
           // La ruta/método todavía no la implementa el backend: solo esta llamada va al mock
           console.warn('[API] 404 en', ruta, '-> respuesta simulada');

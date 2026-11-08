@@ -45,8 +45,11 @@ body{
 .pantalla{
   position:fixed;inset:0;display:none;
   flex-direction:column;align-items:center;justify-content:center;
-  text-align:center;padding:9vh 4vw;gap:2.2vw;
+  /* abajo deja lugar para el estado, el botón de modo y el reloj */
+  text-align:center;padding:9vh 4vw 16vh;gap:min(2.2vw,3vh);
 }
+/* Los tamaños usan min(vw, vh): así caben también en pantallas anchas pero
+   bajitas (laptop con la ventana del navegador, no en pantalla completa). */
 .pantalla.activa{display:flex}
 
 /* ---------- Pantalla de espera ---------- */
@@ -62,10 +65,10 @@ body{
           mask-image:radial-gradient(ellipse at center,#000 10%,transparent 65%);
 }
 #pantalla-espera > *{position:relative}
-.titulo{font-size:clamp(44px,8vw,160px);font-weight:700;line-height:1.02;letter-spacing:-.035em}
+.titulo{font-size:clamp(36px,min(8vw,10vh),160px);font-weight:700;line-height:1.02;letter-spacing:-.035em}
 .subtitulo{display:flex;gap:1vw;justify-content:center;flex-wrap:wrap}
 .subtitulo span{
-  font-size:clamp(18px,2.4vw,46px);font-weight:500;color:var(--suave);
+  font-size:clamp(16px,min(2.4vw,3.4vh),46px);font-weight:500;color:var(--suave);
   padding:.5vw 1.6vw;border:max(2px,.15vw) solid var(--linea);border-radius:999px;
   display:inline-flex;align-items:center;gap:.8vw;
 }
@@ -73,7 +76,7 @@ body{
 
 /* Marco de escaneo: credencial dentro de esquinas tipo visor, con línea que recorre */
 .icono{
-  width:clamp(170px,22vw,380px);aspect-ratio:1/1;position:relative;
+  width:clamp(120px,min(22vw,30vh),380px);aspect-ratio:1/1;position:relative;
   display:grid;place-items:center;margin-bottom:1vw;
 }
 .icono svg.credencial{width:62%;height:auto;display:block;color:var(--texto)}
@@ -108,7 +111,7 @@ body{
 /* ---------- PASO 4: pantalla de resultado ----------
    Todo el fondo cambia de color para que el guardia lo vea de lejos:
    verde = pasa, rojo = rechazado, ámbar = externo o repetido. */
-#pantalla-resultado{transition:background .15s}
+#pantalla-resultado{transition:background .15s;padding-top:6vh;padding-bottom:12vh}
 #pantalla-resultado.verde{background:radial-gradient(90vw 80vh at 50% 20%,var(--verde-a),var(--verde-b))}
 #pantalla-resultado.rojo{background:radial-gradient(90vw 80vh at 50% 20%,var(--rojo-a),var(--rojo-b))}
 #pantalla-resultado.ambar{background:radial-gradient(90vw 80vh at 50% 20%,var(--ambar-a),var(--ambar-b))}
@@ -116,7 +119,7 @@ body{
 
 /* Icono en un círculo blanco con el color del resultado (forma + color, no solo color) */
 .res-icono{
-  width:clamp(96px,12vw,220px);height:clamp(96px,12vw,220px);border-radius:50%;
+  width:clamp(64px,min(12vw,13vh),220px);height:clamp(64px,min(12vw,13vh),220px);border-radius:50%;
   display:grid;place-items:center;background:#fff;
   box-shadow:0 0 0 1.4vw rgba(255,255,255,.14);
   animation:pop .32s var(--curva);
@@ -132,27 +135,27 @@ body{
   border:max(6px,.7vw) solid rgba(255,255,255,.15);border-top-color:var(--azul);animation:gira .8s linear infinite}
 @keyframes gira{to{transform:rotate(360deg)}}
 
-.res-titulo{font-size:clamp(44px,7.5vw,150px);font-weight:700;line-height:1;letter-spacing:-.035em;
+.res-titulo{font-size:clamp(36px,min(7.5vw,10vh),150px);font-weight:700;line-height:1;letter-spacing:-.035em;
   animation:sube .3s var(--curva)}
 @keyframes sube{from{opacity:0;transform:translateY(1.2vw)}}
 
 /* Tarjeta de la persona: panel translúcido sobre el color */
 .res-persona{
   display:flex;align-items:center;gap:2.6vw;max-width:92vw;
-  padding:1.6vw 3vw 1.6vw 1.6vw;border-radius:2.4vw;
+  padding:min(1.6vw,2vh) 3vw min(1.6vw,2vh) min(1.6vw,2vh);border-radius:2.4vw;
   background:rgba(0,0,0,.2);border:max(1px,.12vw) solid rgba(255,255,255,.16);
   animation:sube .36s var(--curva);
 }
-.res-foto{width:clamp(110px,14vw,280px);height:clamp(110px,14vw,280px);border-radius:50%;
+.res-foto{width:clamp(72px,min(14vw,16vh),280px);height:clamp(72px,min(14vw,16vh),280px);border-radius:50%;
   object-fit:cover;border:max(3px,.4vw) solid #fff;background:#1e293b;flex-shrink:0}
-.res-nombre{font-size:clamp(28px,4.4vw,88px);font-weight:700;text-align:left;line-height:1.08;letter-spacing:-.02em}
-.res-detalle{font-size:clamp(18px,2.4vw,46px);color:rgba(255,255,255,.88);text-align:left;margin-top:.6vw}
-.res-motivo{font-size:clamp(22px,3.2vw,62px);font-weight:600;background:rgba(0,0,0,.24);
+.res-nombre{font-size:clamp(24px,min(4.4vw,6.2vh),88px);font-weight:700;text-align:left;line-height:1.08;letter-spacing:-.02em}
+.res-detalle{font-size:clamp(16px,min(2.4vw,3.4vh),46px);color:rgba(255,255,255,.88);text-align:left;margin-top:.6vw}
+.res-motivo{font-size:clamp(18px,min(3.2vw,4.4vh),62px);font-weight:600;background:rgba(0,0,0,.24);
   padding:.8vw 2.4vw;border-radius:1.4vw;max-width:92vw}
 .res-hora{font-family:var(--mono);font-size:clamp(18px,2.2vw,42px);color:rgba(255,255,255,.85);
   font-variant-numeric:tabular-nums}
 /* Permiso nocturno vigente (campo "permiso" de /api/scan) */
-.res-permiso{font-size:clamp(20px,2.8vw,54px);font-weight:600;background:#312e81;color:#e0e7ff;
+.res-permiso{font-size:clamp(16px,min(2.8vw,4vh),54px);font-weight:600;background:#312e81;color:#e0e7ff;
   padding:.8vw 2.4vw;border-radius:999px;display:none;align-items:center;gap:1vw;
   border:max(1px,.12vw) solid rgba(199,210,254,.35)}
 .res-permiso svg{width:1em;height:1em;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
@@ -402,8 +405,12 @@ const MOTIVOS = {
   externo:        'Visitante externo — pendiente de confirmar',
   repetido:       'Ya se registró hace unos segundos',
   ya_dentro:      'Ya estás dentro — usa el kiosco de salida',
-  sin_conexion:   'Sin conexión con el servidor — avisa al guardia'
+  sin_conexion:   'Sin conexión con el servidor — avisa al guardia',
+  codigo_vencido: 'Código QR vencido o ya usado — genera uno nuevo'
 };
+/* El servidor contesta {resultado:"rechazado", motivo:null} cuando un kiosco de
+   SALIDA lee a alguien sin entrada registrada (motivo interno "sin_ingreso"). */
+const MOTIVO_SIN_INGRESO = 'No hay entrada registrada — usa el kiosco de entrada';
 /* Tiempo en pantalla: los rechazos se quedan un poco más para que se lean */
 const DURACION = { verde: 2500, ambar: 3500, rojo: 4000 };
 const TIEMPO_MAX_SERVIDOR = 5000; // ms; si el servidor no contesta, mostramos error
@@ -457,8 +464,10 @@ function mostrarResultado(r) {
       .filter(Boolean).join(' · ');
   }
 
-  $('res-motivo').style.display = r.motivo ? 'block' : 'none';
-  $('res-motivo').textContent = MOTIVOS[r.motivo] || r.motivo || '';
+  const motivo = r.motivo ? (MOTIVOS[r.motivo] || r.motivo)
+               : (r.resultado === 'rechazado' ? MOTIVO_SIN_INGRESO : '');
+  $('res-motivo').style.display = motivo ? 'block' : 'none';
+  $('res-motivo').textContent = motivo;
 
   // permiso: null | {nombre, hasta} -> "🌙 Permiso: Hackatón hasta 08:00 (08/11)"
   const pm = r.permiso;
@@ -493,7 +502,14 @@ function mostrarResultado(r) {
    español, el guion puede llegar como ' o ? y las letras en minúscula.
    Si quedan exactamente 12 letras/números, rearmamos "XXXX-XXXX-XXXX". */
 function normalizarCodigo(txt) {
-  const limpio = String(txt).trim().toUpperCase();
+  // QR dinámico "D.<id>.<timestamp>.<firma>": la firma es hexadecimal en minúsculas
+  // y el servidor la compara tal cual, así que NO se pasa a mayúsculas.
+  const crudo = String(txt).trim();
+  if (/^d\.\d+\.\d{13}\.[0-9a-f]{64}$/i.test(crudo)) {
+    const p = crudo.split('.');
+    return `D.${p[1]}.${p[2]}.${p[3].toLowerCase()}`;
+  }
+  const limpio = crudo.toUpperCase();
   const solo = limpio.replace(/[^A-Z0-9]/g, '');
   if (solo.length === 12 && /[^A-Z0-9]/.test(limpio)) {
     return `${solo.slice(0, 4)}-${solo.slice(4, 8)}-${solo.slice(8)}`;

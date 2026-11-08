@@ -1,13 +1,21 @@
-# Secretos: NUNCA se suben (QR_SECRET, GMAIL_APP_PASSWORD, IA_API_KEY)
+# Secretos: NUNCA se suben (QR_SECRET, ADMIN_KEY, GMAIL_APP_PASSWORD, IA_API_KEY)
 .env
 .env.*
+# ...pero la plantilla sin claves sí se sube
+!.env.example
 
 # Dependencias (se reinstalan con npm install)
 node_modules/
 
-# Base de datos local y archivos del sistema
+# Base de datos local (SQLite y sus archivos WAL) y archivos del sistema
 *.db
+*.db-wal
+*.db-shm
 *.sqlite
 *.sqlite3
 .DS_Store
 Thumbs.db
+
+# Certificados HTTPS locales (mkcert) y fotos generadas por seed.js
+**/certs/
+server/public/fotos/
