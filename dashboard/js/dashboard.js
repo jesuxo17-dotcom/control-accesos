@@ -27,7 +27,9 @@ const TIPOS_ALERTA = {
   estancia_larga: 'Más de 14 h dentro',
   kioscos_distintos: 'Dos kioscos en < 2 min'
 };
-const MAX_FEED = 25;     // cuántos accesos se muestran
+// Icono SVG (estilo Lucide) para permisos nocturnos; texto fijo, no viene de la BD
+const ICONO_LUNA = '<svg class="ico" style="width:12px;height:12px;vertical-align:-1px" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></svg>';
+const MAX_FEED = 25;    // cuántos accesos se muestran
 const MAX_ALERTAS = 30;
 
 const $ = id => document.getElementById(id);
@@ -42,23 +44,34 @@ const entradasPorHora = new Array(24).fill(0);
 function crearGraficas() {
   Chart.defaults.color = css('--suave');
   Chart.defaults.borderColor = css('--borde');
-  Chart.defaults.font.family = 'system-ui, Arial, sans-serif';
+  Chart.defaults.font.family = css('--fuente') || 'system-ui, Arial, sans-serif';
+  Chart.defaults.font.size = 12;
+  // Sin animación si el usuario pidió movimiento reducido
+  const reducido = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const primario = css('--primario');
+  // Ejes discretos (estilo suizo): solo líneas guía del eje de valores, sin bordes
+  const ejeValor = { beginAtZero: true, ticks: { precision: 0 }, border: { display: false }, grid: { color: css('--borde') } };
+  const ejeCat = { grid: { display: false }, border: { display: false } };
   const base = {
-    responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
-    plugins: { legend: { display: false } },
-    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+    responsive: true, maintainAspectRatio: false, animation: { duration: reducido ? 0 : 250 },
+    plugins: {
+      legend: { display: false },
+      tooltip: { backgroundColor: '#0f172a', padding: 10, cornerRadius: 8, displayColors: false,
+        titleFont: { weight: '600' }, callbacks: { label: c => `${c.formattedValue} personas` } }
+    },
+    scales: { x: ejeCat, y: ejeValor }
   };
 
   // Barras horizontales: los nombres de carrera son largos y así caben en el celular
   gCarrera = new Chart($('g-carrera'), {
     type: 'bar',
-    data: { labels: [], datasets: [{ data: [], backgroundColor: css('--primario'), borderRadius: 6 }] },
-    options: { ...base, indexAxis: 'y', scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } }
+    data: { labels: [], datasets: [{ data: [], backgroundColor: primario, borderRadius: 6, maxBarThickness: 26 }] },
+    options: { ...base, indexAxis: 'y', scales: { x: ejeValor, y: ejeCat } }
   });
 
   gGrupo = new Chart($('g-grupo'), {
     type: 'bar',
-    data: { labels: [], datasets: [{ data: [], backgroundColor: css('--verde'), borderRadius: 6 }] },
+    data: { labels: [], datasets: [{ data: [], backgroundColor: primario, borderRadius: 6, maxBarThickness: 32 }] },
     options: base
   });
 
@@ -66,10 +79,14 @@ function crearGraficas() {
     type: 'line',
     data: {
       labels: entradasPorHora.map((_, h) => h + 'h'),
-      datasets: [{ data: entradasPorHora, borderColor: css('--ambar'), backgroundColor: css('--ambar-bg'),
-        fill: true, tension: .35, pointRadius: 2 }]
+      datasets: [{ data: entradasPorHora, borderColor: primario, borderWidth: 2,
+        backgroundColor: css('--primario-suave'), fill: true, cubicInterpolationMode: 'monotone',   // curva suave sin bajar de 0
+        pointRadius: 0, pointHoverRadius: 5, pointHitRadius: 12 }]
     },
-    options: base
+    options: { ...base, interaction: { mode: 'index', intersect: false },
+      plugins: { ...base.plugins, tooltip: { ...base.plugins.tooltip,
+        callbacks: { label: c => `${c.formattedValue} entradas` } } },
+      scales: { x: { ...ejeCat, ticks: { maxTicksLimit: 8 } }, y: ejeValor } }
   });
 }
 
@@ -83,7 +100,8 @@ function pintarAforo(a) {
   }
   $('actualizado').textContent = 'Actualizado ' + horaDe(ahoraLocal());
   // Campo nuevo: cuántos de los que están dentro tienen permiso nocturno vigente
-  $('con-permiso').textContent = a.con_permiso ? `🌙 ${a.con_permiso} con permiso nocturno` : '';
+  // (el icono de luna lo pone el CSS de .chip-permiso; si queda vacío, el chip se oculta)
+  $('con-permiso').textContent = a.con_permiso ? `${a.con_permiso} con permiso nocturno` : '';
 
   gCarrera.data.labels = a.por_carrera.map(x => x.carrera);
   gCarrera.data.datasets[0].data = a.por_carrera.map(x => x.dentro);
@@ -117,7 +135,7 @@ function agregarAlFeed(ev) {
   const detalle = [u?.carrera, u?.grupo, ev.motivo ? MOTIVOS[ev.motivo] || ev.motivo : null, ev.kiosco_id]
     .filter(Boolean).map(esc).join(' · ') +
     // Campo nuevo de /api/scan: permiso: null | {nombre, hasta}
-    (ev.permiso ? ` <span class="badge ambar">🌙 ${esc(ev.permiso.nombre)} hasta ${esc(fechaCorta(ev.permiso.hasta))}</span>` : '');
+    (ev.permiso ? ` <span class="badge indigo">${ICONO_LUNA} ${esc(ev.permiso.nombre)} hasta ${esc(fechaCorta(ev.permiso.hasta))}</span>` : '');
 
   const li = document.createElement('li');
   li.className = ev.color || 'verde';
@@ -198,10 +216,10 @@ async function cargarSinPermiso() {
           <div class="detalle">${[u.carrera, u.grupo, u.tipo].filter(Boolean).map(esc).join(' · ')}</div>
         </div>
         <div class="hora">${u.desde ? 'desde ' + horaDe(u.desde).slice(0, 5) : ''}</div>
-      </li>`).join('') : '<li class="vacio">Nadie dentro sin permiso 👍</li>';
+      </li>`).join('') : '<li class="vacio">Nadie dentro sin permiso</li>';
     // De 23:00 a 00:00 la tarjeta se resalta para que el guardia la revise
     const h = horaNum(ahoraLocal());
-    $('tarjeta-sin-permiso').style.outline = (h === 23 && lista.length) ? '3px solid var(--ambar)' : '';
+    $('tarjeta-sin-permiso').classList.toggle('urgente', h === 23 && lista.length > 0);
   } catch (e) { console.warn('Dentro sin permiso:', e.message); }
 }
 $('btn-sin-permiso').addEventListener('click', cargarSinPermiso);
