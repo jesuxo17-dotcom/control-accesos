@@ -40,7 +40,7 @@
       espera.textContent = r.respuesta || 'Sin respuesta.';
     } catch (e) {
       espera.classList.remove('esperando');
-      espera.textContent = '⚠️ No pude responder: ' + e.message;
+      espera.textContent = 'No pude responder: ' + e.message;
     } finally {
       form.querySelector('button').disabled = false;
       texto.focus();

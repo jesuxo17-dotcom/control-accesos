@@ -2,19 +2,40 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
+<!-- Zoom desactivado a propósito: es un kiosco de pantalla fija -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Kiosco de acceso</title>
+<!-- IBM Plex Sans/Mono; sin internet se usa la fuente del sistema (la demo sigue funcionando) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 <style>
 /* =========================================================
    KIOSCO - estilos
+   Sistema de diseño (ui-ux-pro-max): Minimalism & Swiss,
+   IBM Plex Sans, fondo azul noche, colores semánticos de
+   pantalla completa y movimiento sutil (respeta reduced-motion).
    Letras grandes (se miden en vw para que se lean a 2 metros
-   sin importar el tamaño de la pantalla) y alto contraste.
+   sin importar el tamaño de la pantalla) y alto contraste
+   (texto blanco >= 4.5:1 sobre cada color de resultado).
    ========================================================= */
+:root{
+  --noche:#0b1120; --linea:rgba(148,163,184,.18);
+  --texto:#f8fafc; --suave:#a5b4c8;
+  --azul:#3b82f6; --azul-claro:#93c5fd;
+  --ok:#22c55e; --mal:#ef4444;
+  --verde-a:#15803d; --verde-b:#14532d;   /* blanco 5.0:1 / 9.9:1 */
+  --rojo-a:#b91c1c;  --rojo-b:#7f1d1d;    /* blanco 6.5:1 / 9.8:1 */
+  --ambar-a:#b45309; --ambar-b:#78350f;   /* blanco 5.0:1 / 9.6:1 */
+  --fuente:"IBM Plex Sans",system-ui,"Segoe UI",Roboto,Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --curva:cubic-bezier(.2,.7,.2,1);
+}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden}
 body{
-  background:#0b1220;color:#fff;
-  font-family:"Segoe UI",system-ui,Roboto,Arial,sans-serif;
+  background:var(--noche);color:var(--texto);
+  font-family:var(--fuente);-webkit-font-smoothing:antialiased;
   cursor:none;                 /* sin cursor: es un kiosco */
   user-select:none;-webkit-user-select:none;
   touch-action:manipulation;
@@ -24,66 +45,131 @@ body{
 .pantalla{
   position:fixed;inset:0;display:none;
   flex-direction:column;align-items:center;justify-content:center;
-  text-align:center;padding:4vw;gap:2.5vw;
+  text-align:center;padding:9vh 4vw;gap:2.2vw;
 }
 .pantalla.activa{display:flex}
 
 /* ---------- Pantalla de espera ---------- */
-.titulo{font-size:clamp(44px,9vw,170px);font-weight:700;line-height:1.05}
-.subtitulo{font-size:clamp(22px,3.4vw,64px);color:#9fb3d1}
-
-/* Icono de credencial con anillo que "respira" para indicar que está listo */
-.icono{width:clamp(120px,18vw,320px);height:auto;position:relative}
-.icono svg{width:100%;height:auto;display:block}
-.anillo{
-  position:absolute;inset:-12%;border:0.6vw solid #3b82f6;border-radius:50%;
-  opacity:.0;animation:pulso 2.4s ease-out infinite;
+#pantalla-espera{
+  background:radial-gradient(60vw 50vh at 50% 0%, rgba(59,130,246,.16), transparent 70%), var(--noche);
 }
-@keyframes pulso{0%{transform:scale(.8);opacity:.7}100%{transform:scale(1.15);opacity:0}}
+/* rejilla sutil de fondo (estilo suizo) */
+#pantalla-espera::before{
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background-image:linear-gradient(var(--linea) 1px,transparent 1px),linear-gradient(90deg,var(--linea) 1px,transparent 1px);
+  background-size:6vw 6vw;
+  -webkit-mask-image:radial-gradient(ellipse at center,#000 10%,transparent 65%);
+          mask-image:radial-gradient(ellipse at center,#000 10%,transparent 65%);
+}
+#pantalla-espera > *{position:relative}
+.titulo{font-size:clamp(44px,8vw,160px);font-weight:700;line-height:1.02;letter-spacing:-.035em}
+.subtitulo{display:flex;gap:1vw;justify-content:center;flex-wrap:wrap}
+.subtitulo span{
+  font-size:clamp(18px,2.4vw,46px);font-weight:500;color:var(--suave);
+  padding:.5vw 1.6vw;border:max(2px,.15vw) solid var(--linea);border-radius:999px;
+  display:inline-flex;align-items:center;gap:.8vw;
+}
+.subtitulo svg{width:1.1em;height:1.1em}
 
-/* Reloj abajo a la derecha */
-.reloj{position:fixed;right:3vw;bottom:2.4vw;text-align:right;color:#9fb3d1}
-.reloj .hora{font-size:clamp(28px,4vw,72px);font-weight:600;color:#fff}
-.reloj .fecha{font-size:clamp(14px,1.6vw,30px)}
+/* Marco de escaneo: credencial dentro de esquinas tipo visor, con línea que recorre */
+.icono{
+  width:clamp(170px,22vw,380px);aspect-ratio:1/1;position:relative;
+  display:grid;place-items:center;margin-bottom:1vw;
+}
+.icono svg.credencial{width:62%;height:auto;display:block;color:var(--texto)}
+.esquinas{position:absolute;inset:0;color:var(--azul)}
+.esquinas svg{width:100%;height:100%;display:block}
+.escaneo{
+  position:absolute;left:12%;right:12%;height:max(3px,.3vw);border-radius:99px;
+  background:linear-gradient(90deg,transparent,var(--azul-claro),transparent);
+  box-shadow:0 0 2vw .3vw rgba(59,130,246,.55);
+  animation:barrido 2.6s var(--curva) infinite alternate;
+}
+@keyframes barrido{from{top:14%}to{top:84%}}
 
-/* Indicador de estado del lector (abajo a la izquierda).
+/* Barras inferiores: estado del lector (izq.), botón de modo (centro), reloj (der.) */
+.reloj{position:fixed;right:3vw;bottom:2.6vw;text-align:right;color:var(--suave)}
+.reloj .hora{font-family:var(--mono);font-size:clamp(28px,4vw,76px);font-weight:600;color:var(--texto);
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1}
+.reloj .fecha{font-size:clamp(14px,1.6vw,30px);margin-top:.4vw}
+.reloj .fecha::first-letter{text-transform:uppercase}
+
+/* Indicador de estado del lector.
    Verde = el input oculto tiene el foco y el lector puede escribir. */
 .estado{
-  position:fixed;left:3vw;bottom:2.4vw;display:flex;align-items:center;gap:1vw;
-  font-size:clamp(14px,1.6vw,30px);color:#9fb3d1;
+  position:fixed;left:3vw;bottom:2.6vw;display:flex;align-items:center;gap:.9vw;
+  font-size:clamp(14px,1.6vw,30px);font-weight:500;color:var(--suave);
+  padding:.6vw 1.4vw;border-radius:999px;background:rgba(15,23,42,.7);border:max(1px,.1vw) solid var(--linea);
 }
-.punto{width:1.4vw;height:1.4vw;min-width:12px;min-height:12px;border-radius:50%;background:#ef4444}
-.punto.ok{background:#22c55e}
+.punto{width:1.1vw;height:1.1vw;min-width:12px;min-height:12px;border-radius:50%;background:var(--mal)}
+.punto.ok{background:var(--ok);animation:latido 2s ease-out infinite}
+@keyframes latido{0%{box-shadow:0 0 0 0 rgba(34,197,94,.6)}100%{box-shadow:0 0 0 1.2vw rgba(34,197,94,0)}}
 
 /* ---------- PASO 4: pantalla de resultado ----------
    Todo el fondo cambia de color para que el guardia lo vea de lejos:
    verde = pasa, rojo = rechazado, ámbar = externo o repetido. */
 #pantalla-resultado{transition:background .15s}
-#pantalla-resultado.verde{background:#0f5132}
-#pantalla-resultado.rojo{background:#7f1d1d}
-#pantalla-resultado.ambar{background:#7a4a05}
-#pantalla-resultado.cargando{background:#0b1220}
-.res-icono{font-size:clamp(70px,12vw,220px);line-height:1;font-weight:800}
-.res-titulo{font-size:clamp(44px,8vw,160px);font-weight:800;line-height:1}
-.res-persona{display:flex;align-items:center;gap:3vw;max-width:92vw}
-.res-foto{width:clamp(110px,16vw,300px);height:clamp(110px,16vw,300px);border-radius:50%;
-  object-fit:cover;border:0.5vw solid rgba(255,255,255,.85);background:#1e293b;flex-shrink:0}
-.res-nombre{font-size:clamp(28px,4.6vw,90px);font-weight:700;text-align:left;line-height:1.1}
-.res-detalle{font-size:clamp(18px,2.6vw,50px);color:rgba(255,255,255,.85);text-align:left;margin-top:.6vw}
-.res-motivo{font-size:clamp(22px,3.4vw,64px);font-weight:600;background:rgba(0,0,0,.25);
-  padding:.8vw 2.4vw;border-radius:1.2vw}
-.res-hora{font-size:clamp(18px,2.2vw,40px);color:rgba(255,255,255,.8)}
+#pantalla-resultado.verde{background:radial-gradient(90vw 80vh at 50% 20%,var(--verde-a),var(--verde-b))}
+#pantalla-resultado.rojo{background:radial-gradient(90vw 80vh at 50% 20%,var(--rojo-a),var(--rojo-b))}
+#pantalla-resultado.ambar{background:radial-gradient(90vw 80vh at 50% 20%,var(--ambar-a),var(--ambar-b))}
+#pantalla-resultado.cargando{background:var(--noche)}
+
+/* Icono en un círculo blanco con el color del resultado (forma + color, no solo color) */
+.res-icono{
+  width:clamp(96px,12vw,220px);height:clamp(96px,12vw,220px);border-radius:50%;
+  display:grid;place-items:center;background:#fff;
+  box-shadow:0 0 0 1.4vw rgba(255,255,255,.14);
+  animation:pop .32s var(--curva);
+}
+.res-icono svg{width:58%;height:58%;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.verde .res-icono{color:var(--verde-a)}
+.rojo  .res-icono{color:var(--rojo-a)}
+.ambar .res-icono{color:var(--ambar-a)}
+@keyframes pop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
+/* Verificando: anillo que gira */
+.cargando .res-icono{background:transparent;box-shadow:none;animation:none}
+.girador{width:100%;height:100%;border-radius:50%;
+  border:max(6px,.7vw) solid rgba(255,255,255,.15);border-top-color:var(--azul);animation:gira .8s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
+
+.res-titulo{font-size:clamp(44px,7.5vw,150px);font-weight:700;line-height:1;letter-spacing:-.035em;
+  animation:sube .3s var(--curva)}
+@keyframes sube{from{opacity:0;transform:translateY(1.2vw)}}
+
+/* Tarjeta de la persona: panel translúcido sobre el color */
+.res-persona{
+  display:flex;align-items:center;gap:2.6vw;max-width:92vw;
+  padding:1.6vw 3vw 1.6vw 1.6vw;border-radius:2.4vw;
+  background:rgba(0,0,0,.2);border:max(1px,.12vw) solid rgba(255,255,255,.16);
+  animation:sube .36s var(--curva);
+}
+.res-foto{width:clamp(110px,14vw,280px);height:clamp(110px,14vw,280px);border-radius:50%;
+  object-fit:cover;border:max(3px,.4vw) solid #fff;background:#1e293b;flex-shrink:0}
+.res-nombre{font-size:clamp(28px,4.4vw,88px);font-weight:700;text-align:left;line-height:1.08;letter-spacing:-.02em}
+.res-detalle{font-size:clamp(18px,2.4vw,46px);color:rgba(255,255,255,.88);text-align:left;margin-top:.6vw}
+.res-motivo{font-size:clamp(22px,3.2vw,62px);font-weight:600;background:rgba(0,0,0,.24);
+  padding:.8vw 2.4vw;border-radius:1.4vw;max-width:92vw}
+.res-hora{font-family:var(--mono);font-size:clamp(18px,2.2vw,42px);color:rgba(255,255,255,.85);
+  font-variant-numeric:tabular-nums}
 /* Permiso nocturno vigente (campo "permiso" de /api/scan) */
-.res-permiso{font-size:clamp(20px,3vw,56px);font-weight:600;background:#312e81;
-  padding:.8vw 2.4vw;border-radius:1.2vw;display:none}
+.res-permiso{font-size:clamp(20px,2.8vw,54px);font-weight:600;background:#312e81;color:#e0e7ff;
+  padding:.8vw 2.4vw;border-radius:999px;display:none;align-items:center;gap:1vw;
+  border:max(1px,.12vw) solid rgba(199,210,254,.35)}
+.res-permiso svg{width:1em;height:1em;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 
 /* Etiqueta con el kiosco y el modo (arriba a la izquierda) */
-.etiqueta-kiosco{position:fixed;left:3vw;top:2.4vw;font-size:clamp(14px,1.6vw,30px);color:#9fb3d1}
+.etiqueta-kiosco{
+  position:fixed;left:3vw;top:2.6vw;
+  font-family:var(--mono);font-size:clamp(13px,1.5vw,28px);font-weight:500;color:var(--suave);
+  padding:.5vw 1.3vw;border-radius:999px;background:rgba(15,23,42,.7);border:max(1px,.1vw) solid var(--linea);
+}
+.etiqueta-kiosco:empty{display:none}
 
 /* ---------- Cámara (paso 3) ---------- */
 #camara{
-  display:none;width:min(62vh,80vw);aspect-ratio:1/1;
-  border:0.5vw solid #3b82f6;border-radius:2vw;overflow:hidden;background:#000;
+  display:none;width:min(58vh,80vw);aspect-ratio:1/1;
+  border:max(3px,.4vw) solid var(--azul);border-radius:2.4vw;overflow:hidden;background:#000;
+  box-shadow:0 0 0 1.2vw rgba(59,130,246,.15);
 }
 #camara video{width:100%!important;height:100%!important;object-fit:cover}
 body.modo-camara #camara{display:block}
@@ -91,20 +177,37 @@ body.modo-camara .icono{display:none}
 
 /* Botón para alternar Lector USB / Cámara (abajo al centro) */
 .boton-modo{
-  position:fixed;left:50%;bottom:2vw;transform:translateX(-50%);
-  background:#1e293b;color:#fff;border:0.25vw solid #475569;border-radius:999px;
-  font:inherit;font-size:clamp(16px,2vw,36px);padding:1vw 3vw;
+  position:fixed;left:50%;bottom:2.4vw;transform:translateX(-50%);
+  display:inline-flex;align-items:center;gap:.9vw;min-height:48px;
+  background:rgba(30,41,59,.85);color:var(--texto);border:max(2px,.15vw) solid #475569;border-radius:999px;
+  font:inherit;font-weight:600;font-size:clamp(16px,1.9vw,36px);padding:.9vw 2.6vw;
   cursor:pointer!important;   /* el body oculta el cursor; aquí sí lo mostramos */
+  transition:background .15s,border-color .15s,opacity .15s;
 }
+.boton-modo svg{width:1.15em;height:1.15em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.boton-modo:hover{border-color:var(--azul)}
 .boton-modo:active{background:#334155}
+.boton-modo:focus-visible{outline:3px solid var(--azul-claro);outline-offset:3px}
+/* Durante el resultado se ocultan los controles para que nada distraiga */
+body.mostrando .boton-modo{opacity:0;pointer-events:none}
 
 /* Aviso de errores de cámara */
 .aviso{
-  position:fixed;top:2vw;left:50%;transform:translateX(-50%);max-width:90vw;
-  background:#7f1d1d;color:#fff;border-radius:1vw;padding:1vw 2.5vw;
-  font-size:clamp(16px,2vw,36px);text-align:center;display:none;
+  position:fixed;top:2.4vw;left:50%;transform:translateX(-50%);max-width:90vw;
+  background:#7f1d1d;color:#fff;border:max(1px,.12vw) solid rgba(255,255,255,.2);border-radius:1.2vw;
+  padding:1vw 2.5vw;font-size:clamp(16px,1.9vw,36px);font-weight:500;text-align:center;display:none;
 }
 .aviso.visible{display:block}
+
+/* Pantallas angostas (tablet vertical): el botón sube para no chocar con estado y reloj */
+@media (max-aspect-ratio:4/5){
+  .boton-modo{bottom:calc(2.6vw + 9vh)}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  .escaneo{animation:none;top:49%}
+}
 
 /* ---------- Input oculto para el lector USB ----------
    NO usamos display:none porque un elemento oculto así no puede
@@ -120,23 +223,32 @@ body.modo-camara .icono{display:none}
 <!-- PASO 1: pantalla de espera -->
 <section id="pantalla-espera" class="pantalla activa">
   <div class="icono" aria-hidden="true">
-    <div class="anillo"></div>
-    <svg viewBox="0 0 200 130" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round">
+    <!-- Esquinas tipo visor -->
+    <div class="esquinas">
+      <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+        <path d="M4 22V12a8 8 0 0 1 8-8h10M78 4h10a8 8 0 0 1 8 8v10M96 78v10a8 8 0 0 1-8 8H78M22 96H12a8 8 0 0 1-8-8V78"/>
+      </svg>
+    </div>
+    <svg class="credencial" viewBox="0 0 200 130" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round">
       <rect x="8" y="8" width="184" height="114" rx="14"/>
       <circle cx="60" cy="52" r="16"/>
       <path d="M34 98c4-16 16-24 26-24s22 8 26 24"/>
       <path d="M112 44h56M112 66h56M112 88h36"/>
     </svg>
+    <div class="escaneo"></div>
   </div>
   <!-- PASO 3: aquí html5-qrcode dibuja el video de la cámara -->
   <div id="camara"></div>
   <h1 class="titulo">Acerca tu credencial</h1>
-  <p class="subtitulo">Código QR o de barras</p>
+  <p class="subtitulo">
+    <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg>Código QR</span>
+    <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 5v14M7 5v14M11 5v14M14 5v14M18 5v14M21 5v14"/></svg>Código de barras</span>
+  </p>
 </section>
 
 <!-- PASO 4: pantalla de resultado (la llena mostrarResultado()) -->
-<section id="pantalla-resultado" class="pantalla">
-  <div class="res-icono" id="res-icono"></div>
+<section id="pantalla-resultado" class="pantalla" aria-live="assertive">
+  <div class="res-icono" id="res-icono" aria-hidden="true"></div>
   <div class="res-titulo" id="res-titulo"></div>
   <div class="res-persona" id="res-persona">
     <img class="res-foto" id="res-foto" alt="">
@@ -158,12 +270,13 @@ body.modo-camara .icono{display:none}
 <div class="aviso" id="aviso" role="alert"></div>
 
 <!-- Reloj y estado del lector -->
-<div class="estado"><span class="punto" id="punto"></span><span id="estado-texto">Revisando lector…</span></div>
+<div class="estado" role="status"><span class="punto" id="punto"></span><span id="estado-texto">Revisando lector…</span></div>
 <div class="reloj"><div class="hora" id="hora"></div><div class="fecha" id="fecha"></div></div>
 
 <!-- PASO 2: input oculto. inputmode="none" evita que salga el teclado en tablets -->
 <input id="lector" type="text" inputmode="none" autocomplete="off" autocapitalize="off"
        autocorrect="off" spellcheck="false" aria-hidden="true" tabindex="-1" autofocus>
+
 
 <!-- Librería local (kiosco/lib/): así la demo funciona aunque no haya internet -->
 <script src="lib/html5-qrcode.min.js"></script>
@@ -274,7 +387,15 @@ $('etiqueta-kiosco').textContent = `${KIOSCO_ID} · modo ${MODO}`;
 
 /* Textos grandes que se muestran según el resultado y el motivo */
 const TITULOS = { ingreso: 'Bienvenido', egreso: 'Hasta pronto', rechazado: 'Acceso denegado', repetido: 'Ya registrado' };
-const ICONOS  = { verde: '✔', rojo: '✖', ambar: '!' };
+/* Iconos SVG (estilo Lucide). Son textos fijos, nunca datos del servidor */
+const ICONOS  = {
+  verde: '<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>',
+  rojo:  '<svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>',
+  ambar: '<svg viewBox="0 0 24 24"><path d="M12 7v6"/><path d="M12 17.5h.01"/></svg>'
+};
+const ICONO_LUNA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></svg>';
+const ICONO_CAMARA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>';
+const ICONO_LECTOR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M10.5 8v8M14 8v8M17 8v8"/></svg>';
 const MOTIVOS = {
   no_registrada:  'Credencial no registrada',
   inactiva:       'Credencial inactiva — acude a Servicios Escolares',
@@ -322,7 +443,7 @@ function mostrarResultado(r) {
   const pantalla = $('pantalla-resultado');
   pantalla.className = 'pantalla activa ' + color;
 
-  $('res-icono').textContent = ICONOS[color];
+  $('res-icono').innerHTML = ICONOS[color];
   $('res-titulo').textContent = TITULOS[r.resultado] || 'Acceso denegado';
 
   const u = r.usuario;
@@ -341,21 +462,25 @@ function mostrarResultado(r) {
 
   // permiso: null | {nombre, hasta} -> "🌙 Permiso: Hackatón hasta 08:00 (08/11)"
   const pm = r.permiso;
-  $('res-permiso').style.display = pm ? 'block' : 'none';
+  $('res-permiso').style.display = pm ? 'inline-flex' : 'none';
   if (pm) {
     const h = String(pm.hasta || '').replace('T', ' ');
-    $('res-permiso').textContent = `🌙 Permiso: ${pm.nombre} hasta ${h.slice(11, 16)} (${h.slice(8, 10)}/${h.slice(5, 7)})`;
+    // Icono fijo + texto con textContent (el nombre del permiso nunca se interpreta como HTML)
+    $('res-permiso').innerHTML = ICONO_LUNA + '<span></span>';
+    $('res-permiso').lastChild.textContent = `Permiso: ${pm.nombre} hasta ${h.slice(11, 16)} (${h.slice(8, 10)}/${h.slice(5, 7)})`;
   }
 
   // La hora viene como "YYYY-MM-DD HH:MM:SS"; mostramos HH:MM
   $('res-hora').textContent = r.fecha_hora ? String(r.fecha_hora).replace('T', ' ').slice(11, 16) : '';
 
   mostrar('pantalla-resultado');
+  document.body.classList.add('mostrando');
   pitido(color);
 
   clearTimeout(temporizador);
   temporizador = setTimeout(() => {
     pantalla.className = 'pantalla';
+    document.body.classList.remove('mostrando');
     mostrar('pantalla-espera');
     ocupado = false;
     enfocar();
@@ -385,7 +510,8 @@ async function procesarCodigo(codigo, origen) {
 
   // Pantalla de "procesando" mientras responde el servidor (normalmente < 200 ms)
   $('pantalla-resultado').className = 'pantalla cargando';
-  $('res-icono').textContent = '…';
+  $('res-icono').innerHTML = '<div class="girador"></div>';
+  document.body.classList.add('mostrando');
   $('res-titulo').textContent = 'Verificando';
   $('res-persona').style.display = 'none';
   $('res-motivo').style.display = 'none';
@@ -496,10 +622,17 @@ async function cambiarFuente(usarCamara) {
     document.body.classList.remove('modo-camara');
     camaraActiva = false;
   }
-  $('boton-modo').textContent = camaraActiva ? 'Usar lector USB' : 'Usar cámara';
+  pintarBotonModo();
   guardarLS('kiosco_fuente', camaraActiva ? 'camara' : 'lector');
   enfocar(); // el input oculto recupera el foco
 }
+
+/* Texto + icono del botón según la fuente que se puede activar */
+function pintarBotonModo() {
+  $('boton-modo').innerHTML = (camaraActiva ? ICONO_LECTOR : ICONO_CAMARA) +
+    (camaraActiva ? 'Usar lector USB' : 'Usar cámara');
+}
+pintarBotonModo();
 
 $('boton-modo').addEventListener('click', () => cambiarFuente(!camaraActiva));
 
